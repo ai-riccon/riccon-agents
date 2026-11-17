@@ -28,7 +28,8 @@
           "enum": ["web-app", "api", "cli", "static", "automation", "other"]
         },
         "risk_tier": { "enum": ["T1", "T2", "T3", "T4"] },
-        "status": { "enum": ["greenfield", "existing"] }
+        "status": { "enum": ["greenfield", "existing"] },
+        "timezone": { "type": "string", "minLength": 1 }
       }
     },
     "product": {

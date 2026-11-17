@@ -69,6 +69,7 @@ export function defaultContract({
       type,
       risk_tier: riskTier,
       status,
+      timezone: 'Asia/Shanghai',
     },
     product: {
       goal: '',

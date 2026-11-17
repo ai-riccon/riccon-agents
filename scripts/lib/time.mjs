@@ -1,13 +1,25 @@
-export function nowIso() {
-  return new Date().toISOString();
+export const TEAM_TIMEZONE = 'Asia/Shanghai';
+export const TEAM_UTC_OFFSET_MINUTES = 8 * 60;
+
+/**
+ * 返回带北京时区偏移的 ISO 8601 时间（UTC+08:00）。
+ *
+ * @param {Date} [date]
+ * @returns {string}
+ */
+export function nowIso(date = new Date()) {
+  const shifted = new Date(date.getTime() + TEAM_UTC_OFFSET_MINUTES * 60_000);
+  return shifted.toISOString().replace('Z', '+08:00');
 }
 
 /**
+ * 用于文件名的时间戳；与 nowIso 一样使用北京时间。
+ *
  * @param {Date} [date]
  * @returns {string}
  */
 export function timestampSlug(date = new Date()) {
-  return date.toISOString().replace(/[:.]/g, '-');
+  return nowIso(date).replace(/[:.]/g, '-');
 }
 
 /**

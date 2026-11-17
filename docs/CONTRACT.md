@@ -21,7 +21,7 @@ project:
 | 字段 | 用途 |
 |---|---|
 | `contract_version` | Schema 版本；当前为 `1`。 |
-| `project` | 名称、类型、风险等级、绿地/现有。 |
+| `project` | 名称、类型、风险等级、绿地/现有、默认时区（默认 `Asia/Shanghai`）。 |
 | `product` | 目标、用户、MVC、non-goals、成功指标、模块路线图。 |
 | `stack` | 语言、框架、运行时、数据库、包管理器、版本；多栈仓库用 `stack.subprojects` 显式列出子项目、命令和状态。 |
 | `repo_map` | 源码、测试、文档、基础设施和契约根。 |
@@ -43,6 +43,8 @@ project:
 `stack.subprojects` 用于多栈/单仓多项目：每项至少包含 `path`、`languages`、`package_manager`，可带 `frameworks`、`kind` 和子项目 `commands`。`riccon adopt` 会扫描根目录常见的 `client/`、`frontend/`、`web/`、`backend/` 等一层子目录并填充；顶层 `commands` 只代表主栈，子项目命令必须显式引用，不能假设同一套命令。
 
 新项目 `riccon init` 默认写入 `constraints.coverage: {line: 80, branch: 70}` 和包含 `coverage` 的模块 DoD；`commands.coverage` 仍为空，项目必须填入真实命令后才能通过 strict gate。这是“未配置就不放行”，不是零门槛。
+
+`project.timezone` 默认 `Asia/Shanghai`。团队所有时间默认北京时间（UTC+08:00），包括：内核状态/证据/评审/handoff 时间戳、数据库 `timestamptz`/时间字段、日志、UI 展示和任务期限。数据库必须使用带时区类型或显式存储偏移；如果项目必须用 UTC 存储，只在存储层使用 UTC，读写边界和展示层转换为北京时间，并写 ADR 说明。禁止用无时区的本地时间字符串跨系统传递。
 
 `quality.evidence_binding`：
 
