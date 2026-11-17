@@ -1,0 +1,27 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check
+      - name: Smoke init/gate/handoff
+        run: |
+          tmp="$(mktemp -d)"
+          git -C "$tmp" init -q
+          git -C "$tmp" config user.email ci@example.com
+          git -C "$tmp" config user.name CI
+          node scripts/riccon.mjs init --name ci-smoke --type cli --risk-tier T2 --evidence-binding strict --project "$tmp"
+          node scripts/riccon.mjs contract show --project "$tmp" >/dev/null
+          node scripts/riccon.mjs contract validate --project "$tmp"

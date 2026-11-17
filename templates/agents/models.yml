@@ -1,0 +1,11 @@
+# Riccon v0.1 默认模型映射（部署侧配置，不是项目合同）
+# OpenCode Go 额度：DeepSeek V4.1 Flash $100/月，默认所有角色共用。
+# GPT 6 Luna / Claude Haiku 5.5 仅作为 T4/安全评审或额度耗尽时的第二意见。
+# 5h = 20% 月额度，周 = 50%，月 = 100%。
+lead: opencode-go/deepseek-v4.1-flash#max
+product: opencode-go/deepseek-v4.1-flash#high
+architect: opencode-go/deepseek-v4.1-flash#max
+builder: opencode-go/deepseek-v4.1-flash#max
+verifier: opencode-go/deepseek-v4.1-flash#max
+ops: opencode-go/deepseek-v4.1-flash#high
+scan: opencode/deepseek-v4.1-flash-free#high

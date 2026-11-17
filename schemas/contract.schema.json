@@ -1,0 +1,323 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://riccon.dev/schemas/contract.schema.json",
+  "title": "Riccon 项目合同",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "project",
+    "product",
+    "stack",
+    "repo_map",
+    "commands",
+    "tools",
+    "definition_of_done",
+    "decision_owners",
+    "budget"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "contract_version": { "const": 1 },
+    "project": {
+      "type": "object",
+      "required": ["name", "type", "risk_tier", "status"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": {
+          "enum": ["web-app", "api", "cli", "static", "automation", "other"]
+        },
+        "risk_tier": { "enum": ["T1", "T2", "T3", "T4"] },
+        "status": { "enum": ["greenfield", "existing"] }
+      }
+    },
+    "product": {
+      "type": "object",
+      "required": [
+        "goal",
+        "users",
+        "mvc",
+        "non_goals",
+        "success_metrics",
+        "module_roadmap"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "goal": { "type": "string" },
+        "users": { "type": "array", "items": { "type": "string" } },
+        "mvc": { "type": "string" },
+        "non_goals": { "type": "array", "items": { "type": "string" } },
+        "success_metrics": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "module_roadmap": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "goal"],
+            "additionalProperties": true,
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "goal": { "type": "string" },
+              "status": { "enum": ["planned", "building", "done"] }
+            }
+          }
+        }
+      }
+    },
+    "stack": {
+      "type": "object",
+      "required": [
+        "languages",
+        "frameworks",
+        "runtime",
+        "database",
+        "package_manager",
+        "versions"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "frameworks": { "type": "array", "items": { "type": "string" } },
+        "runtime": { "type": "string" },
+        "database": { "type": "string" },
+        "package_manager": { "type": "string" },
+        "versions": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "subprojects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "languages", "package_manager"],
+            "additionalProperties": true,
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "kind": { "type": "string" },
+              "languages": { "type": "array", "items": { "type": "string" } },
+              "frameworks": { "type": "array", "items": { "type": "string" } },
+              "package_manager": { "type": "string" },
+              "commands": { "type": "object", "additionalProperties": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "repo_map": {
+      "type": "object",
+      "required": ["source", "tests", "docs", "infra", "contracts"],
+      "additionalProperties": true,
+      "properties": {
+        "source": { "type": "array", "items": { "type": "string" } },
+        "tests": { "type": "array", "items": { "type": "string" } },
+        "docs": { "type": "string" },
+        "infra": { "type": "string" },
+        "contracts": { "type": "string" }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "required": [
+        "install",
+        "build",
+        "lint",
+        "typecheck",
+        "test",
+        "test_e2e",
+        "run",
+        "deploy_preview",
+        "deploy_prod"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "install": { "type": "string" },
+        "build": { "type": "string" },
+        "lint": { "type": "string" },
+        "typecheck": { "type": "string" },
+        "test": { "type": "string" },
+        "test_e2e": { "type": "string" },
+        "coverage": { "type": "string" },
+        "run": { "type": "string" },
+        "deploy_preview": { "type": "string" },
+        "deploy_prod": { "type": "string" },
+        "sandbox": { "type": "string" }
+      }
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "required": { "type": "boolean" },
+        "runtime": { "type": "string" },
+        "network": { "type": "string" },
+        "allowlist": { "type": "array", "items": { "type": "string" } },
+        "mounts": { "type": "array", "items": { "type": "string" } },
+        "secrets": { "type": "string" },
+        "limits": { "type": "object", "additionalProperties": true },
+        "attestation_terms": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "evidence": { "type": "string" }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "required": ["required", "optional", "mcp", "fallback"],
+      "additionalProperties": true,
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["id"],
+                "additionalProperties": true,
+                "properties": {
+                  "id": { "type": "string" },
+                  "purpose": { "type": "string" },
+                  "fallback": { "type": "string" }
+                }
+              }
+            ]
+          }
+        },
+        "optional": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["id"],
+                "additionalProperties": true,
+                "properties": {
+                  "id": { "type": "string" },
+                  "purpose": { "type": "string" },
+                  "fallback": { "type": "string" }
+                }
+              }
+            ]
+          }
+        },
+        "mcp": { "type": "array", "items": { "type": "string" } },
+        "fallback": { "type": "string" }
+      }
+    },
+    "environments": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "local": { "type": "string" },
+        "preview": { "type": "string" },
+        "sandbox": { "type": "string" },
+        "production": { "type": "string" }
+      }
+    },
+    "integrations": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "auth": { "type": "string" },
+        "payments": { "type": "string" },
+        "email": { "type": "string" },
+        "storage": { "type": "string" },
+        "external_apis": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "pii": { "type": "boolean" },
+        "retention": { "type": "string" },
+        "migrations": { "type": "string" }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "style": { "type": "string" },
+        "security": { "type": "string" },
+        "performance": { "type": "string" },
+        "accessibility": { "type": "string" },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "line": { "type": "number", "minimum": 0, "maximum": 100 },
+            "branch": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "licensing": { "type": "string" },
+        "compliance": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "coding_standard": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "path": { "type": "string" },
+        "owner": { "type": "string" },
+        "comments": { "type": "string" }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "evidence_binding": { "enum": ["strict", "legacy"] }
+      }
+    },
+    "definition_of_done": {
+      "type": "object",
+      "required": ["module", "release"],
+      "additionalProperties": true,
+      "properties": {
+        "module": { "type": "array", "items": { "type": "string" } },
+        "release": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "decision_owners": {
+      "type": "object",
+      "required": [
+        "product",
+        "ux",
+        "architecture",
+        "production",
+        "spending",
+        "destructive"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "product": { "enum": ["user", "team"] },
+        "ux": { "enum": ["user", "team"] },
+        "architecture": { "enum": ["user", "team"] },
+        "production": { "enum": ["user", "team"] },
+        "spending": { "enum": ["user", "team"] },
+        "destructive": { "enum": ["user", "team"] }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "required": ["tokens", "wall_clock", "cost"],
+      "additionalProperties": true,
+      "properties": {
+        "tokens": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number", "minimum": 0 }
+          ]
+        },
+        "wall_clock": { "type": "string" },
+        "cost": { "type": "string" }
+      }
+    }
+  }
+}

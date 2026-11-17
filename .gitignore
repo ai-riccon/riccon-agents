@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+.DS_Store
+*.log
+!**/.riccon/evidence/**/*.log
+!**/docs/reviews/*.log
+.tmp/
+.riccon-old-*/
+.codegraph/

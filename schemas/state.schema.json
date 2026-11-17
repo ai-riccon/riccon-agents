@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://riccon.dev/schemas/state.schema.json",
+  "title": "Riccon 项目状态",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "phase",
+    "current_module",
+    "gate",
+    "health",
+    "last_handoff",
+    "next_action",
+    "budget_usage",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "phase": {
+      "enum": [
+        "init",
+        "contract",
+        "discovery",
+        "mvc",
+        "modules",
+        "release",
+        "operate",
+        "blocked"
+      ]
+    },
+    "current_module": { "type": ["string", "null"] },
+    "gate": {
+      "type": "object",
+      "required": ["status", "module_id", "checked_at", "reasons"],
+      "additionalProperties": true,
+      "properties": {
+        "status": { "enum": ["none", "pass", "fail"] },
+        "module_id": { "type": ["string", "null"] },
+        "checked_at": { "type": ["string", "null"] },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "health": { "enum": ["unknown", "green", "yellow", "red"] },
+    "last_handoff": { "type": ["string", "null"] },
+    "next_action": { "type": "string" },
+    "active_tasks": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "null"] }
+    },
+    "budget_usage": {
+      "type": "object",
+      "required": [
+        "tokens_input",
+        "tokens_output",
+        "wall_clock_minutes",
+        "cost_usd"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "tokens_input": { "type": "number", "minimum": 0 },
+        "tokens_output": { "type": "number", "minimum": 0 },
+        "wall_clock_minutes": { "type": "number", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" }
+  }
+}

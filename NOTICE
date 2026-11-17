@@ -1,0 +1,13 @@
+Riccon Agents
+Copyright 2026 Ricky Licong
+
+本项目是 Riccon Agents 思路的干净重写。上一版实现
+（https://github.com/ai-riccon/riccon-agents，同为 Apache-2.0）
+仅作为设计参考。本仓库没有复制其源代码；保留了状态、handoff、
+门禁和证据等概念，以及项目名称。
+
+This is a clean-room rewrite of the Riccon Agents idea. The previous
+implementation (https://github.com/ai-riccon/riccon-agents), also
+Apache-2.0, was used as a design reference. No source code from that
+repository is copied into this one; the state/handoff/gate/evidence
+concepts and the project name are retained.

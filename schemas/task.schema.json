@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://riccon.dev/schemas/task.schema.json",
+  "title": "Riccon 任务",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "module_id",
+    "title",
+    "owner",
+    "status",
+    "write_scope",
+    "acceptance",
+    "evidence",
+    "tools_used",
+    "blocker",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^TASK-[0-9]{4,}$" },
+    "module_id": { "type": "string" },
+    "title": { "type": "string", "minLength": 1 },
+    "owner": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": ["planned", "ready", "in_progress", "review", "done", "blocked"]
+    },
+    "write_scope": { "type": "array", "items": { "type": "string" } },
+    "acceptance": { "type": "array", "items": { "type": "string" } },
+    "evidence": { "type": "array", "items": { "type": "string" } },
+    "tools_used": { "type": "array", "items": { "type": "string" } },
+    "blocker": { "type": ["string", "null"] },
+    "baseline_commit": { "type": ["string", "null"] },
+    "end_commit": { "type": ["string", "null"] },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" }
+  }
+}

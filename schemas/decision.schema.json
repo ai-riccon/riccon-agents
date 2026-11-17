@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://riccon.dev/schemas/decision.schema.json",
+  "title": "Riccon 决策包",
+  "type": "object",
+  "required": [
+    "decision_id",
+    "title",
+    "status",
+    "owner",
+    "module_id",
+    "blocking",
+    "question",
+    "options",
+    "recommendation",
+    "consequences",
+    "deadline",
+    "default",
+    "answer",
+    "created_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "decision_id": {
+      "type": "string",
+      "pattern": "^DEC-[0-9]{4,}$"
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["open", "answered", "applied", "expired"] },
+    "owner": { "type": "string", "minLength": 1 },
+    "module_id": { "type": ["string", "null"] },
+    "blocking": { "type": "boolean" },
+    "question": { "type": "string" },
+    "options": { "type": "array", "items": { "type": "string" } },
+    "recommendation": { "type": "string" },
+    "consequences": { "type": "string" },
+    "deadline": { "type": ["string", "null"] },
+    "default": { "type": "string" },
+    "answer": { "type": ["string", "null"] },
+    "answer_kind": {
+      "type": ["string", "null"],
+      "enum": ["approve", "reject", "choose", "defer", null]
+    },
+    "release_id": {
+      "type": ["string", "null"],
+      "pattern": "^REL-[0-9]{4,}$"
+    },
+    "environment": {
+      "type": ["string", "null"],
+      "enum": ["sandbox", "staging", "production", null]
+    },
+    "created_at": { "type": "string" },
+    "answered_at": { "type": ["string", "null"] }
+  }
+}

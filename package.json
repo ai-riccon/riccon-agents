@@ -1,0 +1,26 @@
+{
+  "name": "riccon-agents",
+  "version": "0.1.5",
+  "description": "用于 0→1 软件交付的有界自治 OpenCode 智能体团队。",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "bin": {
+    "riccon": "./scripts/riccon.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:watch": "node --test --watch",
+    "check": "node scripts/riccon.mjs doctor && node scripts/install.mjs --dry-run",
+    "sync:permissions": "node scripts/sync-permissions.mjs",
+    "install:dry": "node scripts/install.mjs --dry-run",
+    "install:global": "node scripts/install.mjs",
+    "uninstall:global": "node scripts/install.mjs --uninstall"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "yaml": "^2.9.1"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "TASK-0001",
+  "module_id": "M01",
+  "title": "Implement the critical journey",
+  "owner": "riccon/builder",
+  "status": "planned",
+  "write_scope": [
+    "src/**",
+    "tests/**"
+  ],
+  "acceptance": [
+    "The critical journey works end-to-end."
+  ],
+  "evidence": [],
+  "tools_used": [],
+  "blocker": null,
+  "created_at": "2026-01-01T00:00:00.000Z",
+  "updated_at": "2026-01-01T00:00:00.000Z"
+}

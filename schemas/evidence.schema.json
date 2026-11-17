@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://riccon.dev/schemas/evidence.schema.json",
+  "title": "Riccon 证据记录",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "task_id",
+    "command",
+    "exit_code",
+    "output_path",
+    "output_sha256",
+    "output_bytes",
+    "agent",
+    "cwd",
+    "started_at",
+    "finished_at",
+    "duration_ms",
+    "note"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^EV-[0-9]{4,}$" },
+    "task_id": { "type": "string" },
+    "command": { "type": "string" },
+    "manual": { "type": "boolean" },
+    "commit": { "type": ["string", "null"] },
+    "dirty": { "type": "boolean" },
+    "exit_code": { "type": "integer" },
+    "output_path": { "type": "string" },
+    "output_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "output_bytes": { "type": "integer", "minimum": 0 },
+    "agent": { "type": "string" },
+    "cwd": { "type": "string" },
+    "started_at": { "type": "string" },
+    "finished_at": { "type": "string" },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "note": { "type": "string" },
+    "recorded_at": { "type": "string" }
+  }
+}
