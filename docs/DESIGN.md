@@ -38,7 +38,7 @@ Ops 按需：CI/CD、容器、部署、可观测性、回滚。
 |---|---|
 | Lead | 150 |
 | Product | 80 |
-| Architect | 100 |
+| Architect | 140 |
 | Builder | 200 |
 | Verifier | 130 |
 | Ops | 100 |

@@ -15,7 +15,7 @@ const EXPECTED_AGENTS = ['lead', 'product', 'architect', 'builder', 'verifier', 
 const MIN_STEPS = {
   lead: 150,
   product: 80,
-  architect: 100,
+  architect: 140,
   builder: 200,
   verifier: 130,
   ops: 100,
