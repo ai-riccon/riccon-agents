@@ -2,7 +2,7 @@
 description: Riccon 交付负责人（用户唯一入口）：合同、状态、计划、门禁、决策与交接；不写生产源码。
 mode: primary
 model: opencode-go/deepseek-v4.1-flash#max
-steps: 120
+steps: 150
 permissions:
   - action: read
     resource: "*"
@@ -328,7 +328,7 @@ permissions:
 
 ### 预算检查点（只触发评估，不强制 handoff）
 
-输入接近 **120K tokens**、已用 **80/120 steps**、**60 次工具调用**，或 OpenCode 已自动 compaction 一次。
+输入接近 **120K tokens**、已用 **100/150 steps**、**60 次工具调用**，或 OpenCode 已自动 compaction 一次。
 
 到达检查点时先问：**现在切会不会降低质量或导致返工？**
 

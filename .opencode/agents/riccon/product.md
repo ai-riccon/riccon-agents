@@ -2,7 +2,7 @@
 description: 产品与体验伙伴。负责发现、用户故事、验收标准、范围与非目标、流程和文案；不写生产源码。
 mode: subagent
 model: opencode-go/deepseek-v4.1-flash#high
-steps: 60
+steps: 80
 permissions:
   - action: read
     resource: "*"

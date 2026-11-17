@@ -36,14 +36,14 @@ Ops 按需：CI/CD、容器、部署、可观测性、回滚。
 
 | 角色 | steps |
 |---|---|
-| Lead | 120 |
-| Product | 60 |
-| Architect | 80 |
-| Builder | 160 |
-| Verifier | 100 |
-| Ops | 80 |
+| Lead | 150 |
+| Product | 80 |
+| Architect | 100 |
+| Builder | 200 |
+| Verifier | 130 |
+| Ops | 100 |
 
-M2 的两个 Builder 都在 80 步达到上限；M2.1 将 Builder 提高到 160，并同步提高 Lead/Verifier/Architect。`riccon doctor` 会检查每个角色的 `steps` 不低于当前下限。
+Builder 上限提高到 200；Lead/Verifier/Architect/Ops/Product 同步上调，给长周期任务留出余量。`riccon doctor` 会检查每个角色的 `steps` 不低于当前下限。
 
 ## 4. 决策权
 
@@ -84,7 +84,7 @@ DoD 随轨道变化。T3/MVC 需要验收、构建、测试、关键 E2E、可�
 
 `.riccon/` 是执行状态的唯一事实源。会话从状态 + 最新 handoff + 合同开始；以更新状态和 handoff 结束。聊天历史不是记忆。
 
-Lead 在每个模块 gate 完成后、phase 切换、决策/评审包后、会话暂停超过 24h、切换项目/风险/模型或进入 T4/生产批准前写 handoff，并让用户新开 session。输入接近 120K tokens、80/120 steps、60 次工具调用或自动 compaction 一次只是检查点，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须具备状态/证据/review/gate 已更新、无半写文件或未完成 subagent、`next` 可直接执行、新会话无需重读旧聊天；否则继续或标 blocked。上下文卫生和成本都低于任务质量；不得为了省钱跳过测试、E2E、独立 review 或证据。Architect/Verifier 的 Haiku 接近 80K 时只在任务边界拆新 subagent。
+Lead 在每个模块 gate 完成后、phase 切换、决策/评审包后、会话暂停超过 24h、切换项目/风险/模型或进入 T4/生产批准前写 handoff，并让用户新开 session。输入接近 120K tokens、100/150 steps、60 次工具调用或自动 compaction 一次只是检查点，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须具备状态/证据/review/gate 已更新、无半写文件或未完成 subagent、`next` 可直接执行、新会话无需重读旧聊天；否则继续或标 blocked。上下文卫生和成本都低于任务质量；不得为了省钱跳过测试、E2E、独立 review 或证据。Architect/Verifier 的 Haiku 接近 80K 时只在任务边界拆新 subagent。
 
 ## 9. 工具
 

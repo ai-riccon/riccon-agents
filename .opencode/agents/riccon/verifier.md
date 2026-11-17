@@ -2,7 +2,7 @@
 description: 独立验证者。负责 QA、代码审查和安全基线；写验收测试和评审报告，绝不修改生产源码。
 mode: subagent
 model: opencode-go/deepseek-v4.1-flash#max
-steps: 100
+steps: 130
 permissions:
   - action: read
     resource: "*"
