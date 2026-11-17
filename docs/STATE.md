@@ -118,7 +118,7 @@ Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/
 
 `riccon handoff new` 会先检查：没有 `in_progress`/`review` 任务；done 任务都有证据；phase 为 modules/release/operate 时 module gate 为 pass，且 gate 的 module 必须是当前/最后一个 done 模块；gate 的 `checked_at` 不能早于最新任务或评审；release gate 不是 fail，operate 阶段必须 pass；`next` 非空且不是占位词；`first_read` 非空且路径存在。任一项失败就拒绝写 handoff。`first_read` 传空数组会回退默认列表，不会绕过检查。
 
-触发时机：每个模块 gate 完成后、phase 切换、发出决策/评审包后、会话暂停超过 24h、切换项目/风险等级/模型、进入 T4/生产批准前。输入接近 120K tokens、150/220 steps、60 次工具调用或自动 compaction 一次只是**检查点**，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须满足：状态/证据/review/gate 已更新、代码文档可恢复、没有半写文件/未完成 subagent/未应用决策、`next` 可直接执行、新会话无需重读旧聊天。任何一项不满足就继续或标 blocked；不得为了省成本跳过测试、E2E、独立 review 或证据。handoff 不替代 gate、review 或用户批准。handoff 后新开 session 运行 `/riccon-resume`。
+触发时机：每个模块 gate 完成后、phase 切换、发出决策/评审包后、会话暂停超过 24h、切换项目/风险等级/模型、进入 T4/生产批准前。输入接近 120K tokens、300/440 steps、60 次工具调用或自动 compaction 一次只是**检查点**，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须满足：状态/证据/review/gate 已更新、代码文档可恢复、没有半写文件/未完成 subagent/未应用决策、`next` 可直接执行、新会话无需重读旧聊天。任何一项不满足就继续或标 blocked；不得为了省成本跳过测试、E2E、独立 review 或证据。handoff 不替代 gate、review 或用户批准。handoff 后新开 session 运行 `/riccon-resume`。
 
 ## 门禁
 

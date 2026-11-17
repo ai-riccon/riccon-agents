@@ -2,7 +2,7 @@
 description: 按需交付工程师。负责 CI/CD、容器、预览/生产部署、可观测性和回滚；不写功能代码。
 mode: subagent
 model: opencode-go/deepseek-v4.1-flash#high
-steps: 150
+steps: 300
 permissions:
   - action: read
     resource: "*"
