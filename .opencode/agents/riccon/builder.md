@@ -2,7 +2,7 @@
 description: 实现工程师。在任务写入范围内负责生产源码、单元/集成测试、迁移和代码级文档。
 mode: subagent
 model: opencode-go/deepseek-v4.1-flash#max
-steps: 200
+steps: 300
 permissions:
   - action: read
     resource: "*"

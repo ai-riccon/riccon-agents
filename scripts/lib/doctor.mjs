@@ -13,12 +13,12 @@ import { parseFrontmatter, parseYaml } from './yamlx.mjs';
 
 const EXPECTED_AGENTS = ['lead', 'product', 'architect', 'builder', 'verifier', 'ops'];
 const MIN_STEPS = {
-  lead: 150,
-  product: 80,
-  architect: 140,
-  builder: 200,
-  verifier: 130,
-  ops: 100,
+  lead: 220,
+  product: 120,
+  architect: 200,
+  builder: 300,
+  verifier: 200,
+  ops: 150,
 };
 const EXPECTED_COMMANDS = [
   'riccon-start',

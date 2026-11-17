@@ -2,7 +2,7 @@
 description: 常驻架构师。负责技术栈、架构、数据模型、API/事件契约、ADR 和初始脚手架；不写功能代码。
 mode: subagent
 model: opencode-go/deepseek-v4.1-flash#max
-steps: 140
+steps: 200
 permissions:
   - action: read
     resource: "*"
