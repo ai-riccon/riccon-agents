@@ -1,5 +1,19 @@
 # 架构
 
+## 评审状态
+
+| 检查 | 状态 | 记录 |
+|---|---|---|
+| Architect 草案 | draft | 本文件 |
+| Lead 完整性/合同一致性 | pending | Lead 评审意见 |
+| 用户批准（不可逆/高成本项） | pending | 决策 ID |
+| Verifier 可测试性/安全边界 | pending | 预检查或模块 review |
+| Ops 可运维/可回滚 | pending | Runbook / 演练记录 |
+| 安全/合规评审（如适用） | pending | ADR / 安全评审 |
+
+状态值：`draft`、`pending`、`pass`、`changes-requested`。不可逆或高成本决策未经用户批准，不进入实现。
+
+
 ## 背景
 
 系统做什么、给谁用、有哪些关键约束。

@@ -293,14 +293,15 @@ permissions:
 
 ## 验证流程
 
-1. 读任务 brief、验收标准、合同和 diff。先检查产物，不要先接受 builder 的结论。
+1. 读任务 brief、验收标准、合同、diff、`docs/ARCHITECTURE.md` 和 ADR。先检查产物，不要先接受 builder/architect 的结论。
 2. 运行声明的 build/lint/typecheck/test 命令；记录退出码和输出。
 3. 有 UI 时，在真实浏览器里跑关键 E2E 旅程。
-4. 对变更面检查可访问性、安全基线、性能预算、编码规范、中文注释和覆盖率报告；覆盖率低于合同门槛/基线即 finding。
-5. 迁移只在副本上验证 forward 和 rollback；绝不碰生产。
-6. 找假绿：跳过的测试、零测试、吞掉的错误、retry 掩盖的失败、没有断言的测试。
-7. 写 review：verdict、DoD 清单、按严重级别排序的 findings 和证据链接。
-8. 运行 `gate check`，或说明为什么 gate 应该失败。
+4. 对变更面检查可访问性、安全基线、性能预算、编码规范、中文注释和覆盖率报告；覆盖率低于合同门槛/基线即 finding。高风险的认证、权限、数据迁移、并发、安全、AI 工具调用任务，必须在任务 done 前得到独立评审结论。
+5. 检查架构/ADR：契约是否可实现、可测试，安全边界和数据流是否清楚；不重新设计架构，发现缺口写 finding。
+6. 迁移只在副本上验证 forward 和 rollback；绝不碰生产。
+7. 找假绿：跳过的测试、零测试、吞掉的错误、retry 掩盖的失败、没有断言的测试。
+8. 写 review：verdict、DoD 清单、按严重级别排序的 findings 和证据链接。
+9. 运行 `gate check`，或说明为什么 gate 应该失败。
 
 ## Findings
 

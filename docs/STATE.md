@@ -72,6 +72,12 @@ planned → ready → in_progress → review → done
 
 任务第一次进入 `in_progress` 时记录 `baseline_commit`，之后 review/blocked 再回到 in_progress 不会重置 baseline；同时按 owner 写入 `state.active_tasks`；同一 owner 已有另一个 in-progress 任务时拒绝，活跃任务改 owner 也会检查目标 owner 是否被占用，除非显式 `--force`。进入 `review`/`done` 时，内核用 git 比较 baseline 以来的 tracked/untracked 变更；`write_scope` 之外的文件会导致失败（`.riccon/`、`.codegraph/`、`node_modules/` 除外）。done 任务必须有可解析、且是 HEAD 祖先的 `end_commit`；无 git 却记录 commit、done 缺 `end_commit`、无效/倒退 commit 都 fail-closed。并行任务可用 `task update --baseline-commit SHA --end-commit SHA` 显式设置范围：commit 必须存在且是 HEAD 祖先，baseline 必须是 end 的祖先；`--end-commit` 只允许 review/done。module gate 在 `--require-scope` 下还会检查“每个 done 任务 end_commit 之后提交的文件是否落在全项目任一任务的 write_scope 内”，因此 end_commit 之后的已提交越界改动也会失败。没有 baseline 的旧任务在普通 gate 产生 `task-scope-unverified` warning，在 `--require-scope` 下失败。
 
+任务评审分级：
+
+- **低风险**：普通 UI、文档、简单 CRUD、格式化。Lead 检查 diff、测试和证据后可 done；模块 Verifier 仍在模块 review 覆盖。
+- **高风险**：认证、权限、数据迁移、并发/事务、安全边界、AI 工具调用、生产配置。任务 done 前必须有独立 Verifier 评审结论；不能只靠 Builder 自检或 Lead 代看。
+- Builder 只把任务移到 `review`，不自己 `done`；Lead 负责确认评审和证据后再推进。
+
 并行任务规则：
 
 - 同一 owner 同时只能有一个 `in_progress` 任务，除非显式 `--force`；`--force` 只解决占位，不改变审阅责任。

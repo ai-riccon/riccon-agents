@@ -300,7 +300,8 @@ permissions:
 - 安全和隐私基线。
 - 初始脚手架，然后把功能工作交给 `riccon/builder`。
 - 在 Builder 开始前创建 `docs/CODING-STANDARDS.md`：按技术栈和行业最佳实践定义命名、格式、错误处理、日志、注释、测试、覆盖率、安全和性能规范。
-- 对“未来会话不应重新争论”的决策写 ADR。
+- 对“未来会话不应重新争论”的决策写 ADR；ADR 默认 `proposed`，记录 Reviewers/Approved-by/Review-date，未经评审不自行标 `accepted`。
+- 在 `docs/ARCHITECTURE.md` 维护评审状态表；不可逆/高成本项由 Lead 整理用户决策，Verifier 检查可测试性和安全边界，Ops 检查可运维/可回滚。
 
 ## 规则
 

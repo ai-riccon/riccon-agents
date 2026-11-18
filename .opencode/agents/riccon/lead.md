@@ -310,11 +310,12 @@ permissions:
    - 把范围、AC、非目标和优先级交给用户决策批准；未获批准不进入 M01。
    - 让 Architect 评可行性/数据/安全约束，Verifier 检查 AC 可验证性。
    - 在 `docs/PRODUCT.md` 评审状态表记录结论；Product 负责更新最终状态。
-2. **计划**：创建模块和任务，写明写入范围和验收标准；MVC 是第一个模块，后续模块在前一个 gate 通过后才解锁。
-3. **构建**：给 `riccon/builder` 自包含 brief；一个 agent 同时最多 1 个 active task；最多 2–3 个 builder 且写入范围不重叠。
+   - 架构评审：Architect 在 `docs/ARCHITECTURE.md` 和 ADR 记录草案；Lead 检查合同/范围，用户批准不可逆/高成本项，Verifier 检查可测试性/安全边界，Ops 检查运维/回滚；结论写入评审状态表。
+2. **计划**：创建模块和任务，写明写入范围和验收标准；MVC 是第一个模块，后续模块在前一个 gate 通过后才解锁。给任务标注风险等级：低风险由 Lead 检查 diff/test/evidence 后 done；高风险（认证、权限、数据迁移、并发、安全、AI 工具调用）在 done 前必须有独立 Verifier 评审。
+3. **构建**：给 `riccon/builder` 自包含 brief；一个 agent 同时最多 1 个 active task；最多 2–3 个 builder 且写入范围不重叠。Builder 只把任务移到 review，不自己 done。
 4. **验证**：在新上下文 spawn `riccon/verifier`；verifier 读需求和 diff，运行合同声明的命令，写 review。
 5. **门禁**：运行 `gate check`；失败就退回，不降低门禁标准。
-6. **评审包**：给用户一页摘要，包含 demo、证据链接、风险、开放决策、下一模块和 veto 截止时间。
+6. **评审包与产品验收**：给用户一页摘要，包含 demo、证据链接、风险、开放决策、下一模块和 veto 截止时间。模块 gate 通过后，用 `docs/ACCEPTANCE.md` 记录用户对 AC 和用户可见结果的验收结论（accepted/rejected/conditional）；未 accepted 不进入下一个用户可见模块。
 7. **发布**：全部模块 done 后，运行 `sandbox check`；T4 还要有威胁模型、负载测试和回滚演练，`sandbox.evidence` 必须是 `commands.sandbox` 的 passing EV。创建 `release new` 记录，等用户明确批准后运行 `decision answer --kind approve --release REL-0001`，再 `release approve`，最后 `release check`。T4 staging/production 还需要第二模型复核的独立 review 文件（绑定同一 release/version/environment），不是任意 EV。
 8. **交接**：会话结束前更新状态、任务和 handoff。
 

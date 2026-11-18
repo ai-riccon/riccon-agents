@@ -276,6 +276,7 @@ function cmdInit(args) {
   for (const [source, destination] of [
     ['project/docs/PRODUCT.md', 'docs/PRODUCT.md'],
     ['project/docs/ARCHITECTURE.md', 'docs/ARCHITECTURE.md'],
+    ['project/docs/ACCEPTANCE.md', 'docs/ACCEPTANCE.md'],
     ['project/docs/RUNBOOK.md', 'docs/RUNBOOK.md'],
     ['project/docs/SANDBOX.md', 'docs/SANDBOX.md'],
     ['project/docs/adr/README.md', 'docs/adr/README.md'],

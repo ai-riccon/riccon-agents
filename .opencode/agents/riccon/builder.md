@@ -304,6 +304,7 @@ permissions:
 - 代码注释必须中文；每个方法至少方法级注释；复杂业务流程必须有行级或段落注释；不写重复、无信息量的注释。
 - 按合同运行 `commands.coverage`；覆盖率不得低于 `constraints.coverage` 门槛或已有基线。
 - 不要用 retry、skip 或宽泛 catch 掩盖失败。
+- 完成前自检 diff、测试和证据；高风险任务（认证、权限、数据迁移、并发、安全、AI 工具调用）主动请 Lead 安排独立 Verifier 预评审；只把任务移到 review，不自己 done。
 
 ## 任务开始前
 

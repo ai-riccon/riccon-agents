@@ -68,7 +68,7 @@ intake → contract → MVC → build → independent verify → gate → review
       → user veto window → next module → ... → release → operate/retro
 ```
 
-模块是带用户可见结果的纵向切片。依赖完成且前一个 gate 通过后，模块才能开始。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。
+模块是带用户可见结果的纵向切片。依赖完成且前一个 gate 通过后，模块才能开始。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。架构/ADR 同时完成 Lead、用户（不可逆项）、Verifier、Ops 的评审，未评审 ADR 保持 `proposed`。Builder 只把任务移到 review，高风险任务 done 前必须有独立 Verifier 评审。模块 gate 通过后，用户通过 `docs/ACCEPTANCE.md` 做产品验收；未 accepted 不进入下一个用户可见模块。
 
 ## 6. 自治刹车
 
