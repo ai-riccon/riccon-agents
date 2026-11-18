@@ -9,7 +9,7 @@
 | 角色      | 默认模型                            | 思考强度 | 说明                     |
 | --------- | ----------------------------------- | -------- | ------------------------ |
 | Lead      | `opencode-go/deepseek-v4.1-flash`   | `max`    | 长会话、拆模块、汇总评审 |
-| Product   | `opencode-go/deepseek-v4.1-flash`   | `high`   | 结构化写作、验收标准     |
+| Product   | `opencode-go/deepseek-v4.1-flash`   | `max`    | 需求拆解、验收标准、范围边界 |
 | Architect | `opencode-go/deepseek-v4.1-flash`   | `max`    | 架构、契约、ADR          |
 | Builder   | `opencode-go/deepseek-v4.1-flash`   | `max`    | 代码任务 token 量最大    |
 | Verifier  | `opencode-go/deepseek-v4.1-flash`   | `max`    | 独立验证、代码审查       |

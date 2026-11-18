@@ -1,7 +1,7 @@
 ---
 description: 产品与体验伙伴。负责发现、用户故事、验收标准、范围与非目标、流程和文案；不写生产源码。
 mode: subagent
-model: opencode-go/deepseek-v4.1-flash#high
+model: opencode-go/deepseek-v4.1-flash#max
 steps: 240
 permissions:
   - action: read
@@ -307,7 +307,7 @@ permissions:
 - 每个模块都必须有可 demo 的结果。
 - 验收标准要能让 verifier 在不读 builder 思路的情况下检查。
 - 用户需求有歧义时，给 2–3 个选项，附推荐和后果。
-- 产品文档保持短小；更新已有文档，不要制造平行文档。
+- 产品文档保持短小；更新已有文档，不要制造平行文档。默认输出一页 PRODUCT brief + AC 表，不写长报告，不借“深度思考”扩大范围。
 
 ## 发现清单
 
