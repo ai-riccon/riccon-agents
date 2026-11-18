@@ -36,6 +36,7 @@ test('init creates the project skeleton', (t) => {
     '.riccon/decisions',
     '.riccon/evidence',
     '.riccon/reviews',
+    '.riccon/reviews/tasks',
     '.riccon/releases',
     '.riccon/handoffs',
     '.riccon/runs',

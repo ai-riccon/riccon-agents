@@ -25,6 +25,7 @@ import {
   readModules,
   readReviews,
   readTasks,
+  readTaskReviews,
   saveProject,
   saveState,
 } from './project.mjs';
@@ -219,6 +220,7 @@ function cmdInit(args) {
     paths.decisions,
     paths.evidence,
     paths.reviews,
+    paths.taskReviews,
     paths.releases,
     paths.handoffs,
     paths.runs,
@@ -504,6 +506,7 @@ function cmdState(args) {
   let modules = [];
   let tasks = [];
   let evidence = [];
+  let taskReviews = [];
   try {
     const loaded = loadProject(projectDir);
     state = loaded.state;
@@ -530,6 +533,11 @@ function cmdState(args) {
     evidence = readEvidence(projectDir);
   } catch (error) {
     errors.push(`evidence: ${error.message}`);
+  }
+  try {
+    taskReviews = readTaskReviews(projectDir);
+  } catch (error) {
+    errors.push(`task reviews: ${error.message}`);
   }
 
   const moduleIds = new Set(modules.map((module) => module.id));
@@ -596,6 +604,36 @@ function cmdState(args) {
   for (const record of evidence) {
     if (!taskIds.has(record.task_id)) {
       errors.push(`evidence ${record.id} references unknown task ${record.task_id}`);
+    }
+  }
+
+  for (const record of taskReviews) {
+    if (record.error) {
+      errors.push(record.error);
+      continue;
+    }
+    const data = record.data;
+    const task = tasks.find((item) => item.id === data.task_id);
+    if (!task) {
+      errors.push(
+        `task review ${basename(record.file)} references unknown task ${data.task_id}`,
+      );
+      continue;
+    }
+    if (task.module_id !== data.module_id) {
+      errors.push(
+        `task review ${basename(record.file)} binds task ${data.task_id} to ${data.module_id}, but the task belongs to ${task.module_id}`,
+      );
+    }
+    for (const evidenceId of [
+      ...(data.evidence || []),
+      ...(data.reviewed_evidence || []),
+    ]) {
+      if (!evidenceIds.has(evidenceId)) {
+        errors.push(
+          `task review ${basename(record.file)} references unknown evidence ${evidenceId}`,
+        );
+      }
     }
   }
 

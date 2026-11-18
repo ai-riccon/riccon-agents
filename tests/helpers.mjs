@@ -224,6 +224,54 @@ export function writeReview(
   return file;
 }
 
+export function writeTaskReview(
+  dir,
+  {
+    moduleId = 'M01',
+    taskId = 'TASK-0001',
+    verdict = 'pass',
+    findings = [],
+    evidence = [],
+    reviewedCommits = [],
+    headCommit = '',
+    reviewId = `REV-${taskId}`,
+    reviewerAgent = 'riccon/verifier',
+    reviewerModel = 'test-model',
+    reviewerSession = 'test-session',
+    independent = true,
+    createdAt,
+    fileName = `${taskId}-review.md`,
+    topLevel = false,
+  } = {},
+) {
+  const data = {
+    review_id: reviewId,
+    module_id: moduleId,
+    task_id: taskId,
+    reviewer: {
+      agent: reviewerAgent,
+      session: reviewerSession,
+      model: reviewerModel,
+      independent,
+    },
+    verdict,
+    reviewed_commits: reviewedCommits,
+    head_commit: headCommit,
+    findings,
+    evidence,
+    created_at: createdAt || new Date().toISOString(),
+  };
+  const reviewDir = topLevel
+    ? join(dir, '.riccon', 'reviews')
+    : join(dir, '.riccon', 'reviews', 'tasks');
+  const file = join(reviewDir, fileName);
+  writeText(
+    file,
+    `---\n${YAML.stringify(data)}---\n\n# ${reviewId}\n\nTask review fixture.\n`,
+  );
+  return file;
+}
+
 export function writeDecision(
   dir,
   {

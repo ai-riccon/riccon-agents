@@ -27,6 +27,7 @@ export function projectPaths(projectDir) {
     decisions: join(riccon, 'decisions'),
     evidence: join(riccon, 'evidence'),
     reviews: join(riccon, 'reviews'),
+    taskReviews: join(riccon, 'reviews', 'tasks'),
     releases: join(riccon, 'releases'),
     handoffs: join(riccon, 'handoffs'),
     runs: join(riccon, 'runs'),
@@ -46,6 +47,7 @@ export function ensureProjectDirs(paths) {
     paths.decisions,
     paths.evidence,
     paths.reviews,
+    paths.taskReviews,
     paths.releases,
     paths.handoffs,
     paths.runs,
@@ -139,11 +141,17 @@ export function readJsonRecords(dir, schemaName, label) {
  * @param {string} dir
  * @param {string} schemaName
  * @param {string} label
+ * @param {(name: string) => boolean} [predicate]
  * @returns {{ file: string, data: any | null, body: string, error: string | null }[]}
  */
-export function readMarkdownRecords(dir, schemaName, label) {
+export function readMarkdownRecords(
+  dir,
+  schemaName,
+  label,
+  predicate = (name) => name.endsWith('.md'),
+) {
   const records = [];
-  for (const file of listDir(dir, (name) => name.endsWith('.md'))) {
+  for (const file of listDir(dir, predicate)) {
     let parsed;
     try {
       parsed = parseFrontmatter(readText(file));
@@ -215,12 +223,36 @@ export function readDecisions(projectDir) {
   );
 }
 
-/** @param {string} projectDir */
+/**
+ * 读取模块评审；任务级评审在 reviews/tasks/，不能进入模块 gate。
+ *
+ * @param {string} projectDir
+ */
 export function readReviews(projectDir) {
-  return readMarkdownRecords(
+  const records = readMarkdownRecords(
     projectPaths(projectDir).reviews,
     'review.schema.json',
     'review',
+  );
+  for (const record of records) {
+    if (record.data?.task_id && record.error) {
+      record.error = `${record.error}; task-level reviews belong in .riccon/reviews/tasks/`;
+    }
+  }
+  return records;
+}
+
+/**
+ * 读取任务级/架构级独立评审。
+ *
+ * @param {string} projectDir
+ */
+export function readTaskReviews(projectDir) {
+  return readMarkdownRecords(
+    projectPaths(projectDir).taskReviews,
+    'task-review.schema.json',
+    'task review',
+    (name) => name.endsWith('.md') && name !== 'README.md',
   );
 }
 

@@ -8,7 +8,7 @@ description: 运行模块验证，收集独立评审，检查门禁并生成一�
 
 1. 确认模块可以验证：所有任务 done 且有证据。
 2. 给 `riccon/verifier` 一个自包含 brief：模块、验收标准、合同、diff、声明的命令和证据路径。
-3. verifier 必须运行声明的命令和关键 E2E 旅程，并写 `.riccon/reviews/<module>-review.md`，包含 verdict、DoD 清单、`dod_evidence` 和 findings；strict 项目不得用自报代替真实 EV。
+3. verifier 必须运行声明的命令和关键 E2E 旅程，并写 `.riccon/reviews/<module>-review.md`，包含 verdict、DoD 清单、`dod_evidence` 和 findings；strict 项目不得用自报代替真实 EV。任务级/架构级独立评审写到 `.riccon/reviews/tasks/<task>-review.md`，不参与模块 gate。
 4. 运行 `riccon gate check --module <module> --project .`。
 5. gate 失败时：
    - 把 P0/P1 findings 连同可复现案例退回 builder；

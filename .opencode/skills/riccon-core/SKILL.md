@@ -72,7 +72,8 @@ modules/M01.json      模块目标、验收、任务、review、墙钟上限
 tasks/TASK-0001.json  owner、status、写入范围、验收、证据、tools
 decisions/DEC-0001.md 问题、选项、推荐、截止、默认值、答案
 evidence/             按任务分组的命令日志和哈希
-reviews/M01-review.md 独立 verdict、DoD 清单、findings
+reviews/M01-review.md 模块评审：独立 verdict、DoD 清单、findings
+reviews/tasks/TASK-0001-review.md 任务级/架构级独立评审
 handoffs/handoff-*.md 会话摘要、下一步、不变量、风险
 runs/                 命令和使用记录
 archive/              旧状态，不静默删除
@@ -153,7 +154,7 @@ handoff 写状态和确切下一步，不贴日志；新会话从 `.riccon/` + h
 - 下一模块计划；
 - veto 截止时间。
 
-完整 review 在 `.riccon/reviews/`，评审包链接过去。
+完整模块 review 在 `.riccon/reviews/<module>-review.md`，任务级评审在 `.riccon/reviews/tasks/`；评审包链接过去。
 
 ## 9. 完成定义
 

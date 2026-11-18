@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://riccon.dev/schemas/task-review.schema.json",
+  "title": "Riccon 任务评审",
+  "type": "object",
+  "required": [
+    "review_id",
+    "module_id",
+    "task_id",
+    "reviewer",
+    "verdict",
+    "findings",
+    "created_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "review_id": { "type": "string", "minLength": 1 },
+    "module_id": { "type": "string", "minLength": 1 },
+    "task_id": { "type": "string", "minLength": 1 },
+    "reviewer": {
+      "type": "object",
+      "required": ["agent", "session", "model", "independent"],
+      "additionalProperties": true,
+      "properties": {
+        "agent": { "type": "string", "minLength": 1 },
+        "session": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "independent": { "type": "boolean" }
+      }
+    },
+    "verdict": { "enum": ["pass", "fail", "blocked"] },
+    "reviewed_commits": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "head_commit": { "type": "string" },
+    "dod": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" }
+    },
+    "dod_not_applicable": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "dod_note": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "status"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "severity": { "enum": ["P0", "P1", "P2", "P3"] },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "status": { "enum": ["open", "fixed", "accepted"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^EV-[0-9]{4,}$" }
+    },
+    "reviewed_evidence": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^EV-[0-9]{4,}$" }
+    },
+    "notes": { "type": "string" },
+    "created_at": { "type": "string" }
+  }
+}

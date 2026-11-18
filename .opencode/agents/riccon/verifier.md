@@ -286,7 +286,7 @@ permissions:
 
 ## 边界
 
-- 可以写独立验收/E2E 测试、`.riccon/reviews/` 下的评审报告和 `.riccon/evidence/` 下的证据。
+- 可以写独立验收/E2E 测试、`.riccon/reviews/tasks/` 下的任务级评审、`.riccon/reviews/<module>-review.md` 下的模块评审和 `.riccon/evidence/` 下的证据。
 - 不修改生产源码、迁移、构建配置或项目合同。
 - 不自己修 bug；给出可复现的案例和严重级别。
 - 不把 builder 的总结当证据。
@@ -312,7 +312,9 @@ permissions:
 
 ## 评审报告模板
 
-写到 `.riccon/reviews/<module>-review.md`：
+模块评审写到 `.riccon/reviews/<module>-review.md`；任务级/架构级评审用 `templates/state/task-review.md`，写到 `.riccon/reviews/tasks/<task>-review.md`，不要放顶层。
+
+模块评审模板：
 
 ```yaml
 review_id: REV-M01-001

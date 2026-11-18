@@ -8,12 +8,15 @@ import {
   cleanup,
   initProject,
   mutateContract,
+  readJson,
   run,
   runJson,
   setModuleStartedHoursAgo,
   tempDir,
   writeDecision,
+  writeJson,
   writeReview,
+  writeTaskReview,
 } from "./helpers.mjs";
 
 function prepareModule(dir) {
@@ -79,6 +82,55 @@ test("gate fails without a review and passes with one", (t) => {
 
   const status = runJson(["status", "--project", dir]);
   assert.equal(status.json.gate.status, "pass");
+});
+
+test("gate ignores task reviews under reviews/tasks", (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  const { task } = prepareModule(dir);
+  writeTaskReview(dir, {
+    moduleId: "M01",
+    taskId: task.id,
+    verdict: "fail",
+  });
+
+  const withoutModuleReview = runJson([
+    "gate",
+    "check",
+    "--module",
+    "M01",
+    "--project",
+    dir,
+  ]);
+  assert.equal(withoutModuleReview.code, 1);
+  assert.match(withoutModuleReview.json.errors.join(" "), /no review found/);
+
+  writeReview(dir);
+  const pass = runJson(["gate", "check", "--module", "M01", "--project", dir]);
+  assert.equal(pass.code, 0, pass.json?.errors?.join("; "));
+  assert.equal(pass.json.review_path, ".riccon/reviews/M01-review.md");
+});
+
+test("gate rejects a task review used as the module review", (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  const { task } = prepareModule(dir);
+  writeTaskReview(dir, {
+    moduleId: "M01",
+    taskId: task.id,
+    topLevel: true,
+  });
+
+  const modulePath = join(dir, ".riccon", "modules", "M01.json");
+  const module = readJson(modulePath);
+  module.review = `.riccon/reviews/${task.id}-review.md`;
+  writeJson(modulePath, module);
+
+  const result = runJson(["gate", "check", "--module", "M01", "--project", dir]);
+  assert.equal(result.code, 1);
+  assert.match(result.json.errors.join(" "), /task-level reviews belong/);
 });
 
 test("gate fails on an open P0", (t) => {

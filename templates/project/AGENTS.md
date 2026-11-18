@@ -127,6 +127,7 @@ budget:
 - Product 的 brief/AC/non-goals 必须经 Lead 完整性评审、用户范围批准、Architect 可行性评审和 Verifier 可验证性检查；未批准不进入模块实现。
 - Architect 的架构/ADR 必须经 Lead 完整性、用户不可逆决策、Verifier 可测试性/安全边界、Ops 可运维性检查；未评审的 ADR 保持 `proposed`。
 - Builder 只把任务移到 review，不自己 done；高风险任务（认证、权限、迁移、并发、安全、AI 工具调用）done 前必须有独立 Verifier 评审。
+- 任务级/架构级独立评审写到 `.riccon/reviews/tasks/<task>-review.md`；模块评审写到 `.riccon/reviews/<module>-review.md`。任务评审不参与模块 gate，高风险任务 closeout 必须引用。
 - 模块 gate 通过后，先由 Product 按需求、UX 和范围做预验收；预验收 pass 后才提交用户最终验收，结论记录在 `docs/ACCEPTANCE.md`；未 accepted 不进入下一个用户可见模块。
 - 测试按两层执行：任务级跑受影响测试；模块 gate 在最终提交上跑一次全量合同 test/coverage/E2E。高风险、跨模块契约和迁移任务在任务完成时跑全量；任务级定向证据不替代模块 review 的全量绑定。
 - 同一份代码的全量验证只跑一次；提交后用 `riccon evidence run` 记录这次运行，不要先跑一遍再取证，也不要为取证新建临时工作树。

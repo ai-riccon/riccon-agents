@@ -18,6 +18,7 @@ docs/ARCHITECTURE.md   组件、数据流、数据模型、契约、风险
 docs/RUNBOOK.md        运行、部署、检查、回滚、恢复
 docs/adr/              不应被重新争论的决策
 .riccon/reviews/        模块评审报告
+.riccon/reviews/tasks/  任务级/架构级独立评审
 .riccon/handoffs/       会话交接
 ```
 

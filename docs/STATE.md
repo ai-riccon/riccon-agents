@@ -19,7 +19,9 @@
 ├─ evidence/
 │  └─ TASK-0001/         命令日志和 EV-*.json 记录
 ├─ reviews/
-│  └─ M01-review.md      独立 verdict、DoD 清单、findings
+│  ├─ M01-review.md      模块评审：独立 verdict、DoD 清单、findings
+│  └─ tasks/
+│     └─ TASK-0001-review.md  任务级/架构级独立评审
 ├─ releases/
 │  └─ REL-0001.md        版本、环境、发布产物、用户批准
 ├─ handoffs/
@@ -110,6 +112,8 @@ planned → ready → in_progress → review → done
 ### 评审
 
 `reviews/M01-review.md` front matter：`review_id`、`module_id`、`verifier`、`reviewer`（`agent`、`session`、`model`、`independent`）、`verdict`（`pass|fail|blocked`）、`dod` 布尔值、`dod_evidence`（DoD key → EV ID 或数组）、`findings`（`P0`–`P3`，状态 `open|fixed|accepted`）、`evidence`、`reviewed_evidence`、`created_at`。
+
+模块评审固定写在 `.riccon/reviews/<module>-review.md`，由 `review.schema.json` 校验，只有它能参与模块 gate。任务级/架构级独立评审写在 `.riccon/reviews/tasks/<task>-review.md`，由 `task-review.schema.json` 校验；它不进入模块 gate，由 Lead 在任务 closeout 时核对，并在模块评审中引用。`state validate` 会校验两类评审；顶层出现 `task_id` 的评审会提示迁移到 `reviews/tasks/`。
 
 Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/accepted 的 P0/P1。Review 还必须绑定当前 module，`reviewed_evidence` 覆盖每个任务的最新证据，`created_at` 晚于被评审证据，且 `reviewer.independent: true`。
 

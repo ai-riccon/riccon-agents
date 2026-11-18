@@ -393,6 +393,17 @@ export function runDoctor(teamRoot) {
     );
   }
 
+  const templateTaskReview = join(teamRoot, 'templates', 'state', 'task-review.md');
+  if (!exists(templateTaskReview)) {
+    add('template-task-review', 'fail', 'templates/state/task-review.md is missing');
+  } else if (!readText(templateTaskReview).includes('task_id:')) {
+    add(
+      'template-task-review-binding',
+      'fail',
+      'templates/state/task-review.md must document task_id for task review binding',
+    );
+  }
+
   return {
     ok: errors.length === 0,
     errors,

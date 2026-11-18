@@ -9,6 +9,7 @@ import {
   runJson,
   tempDir,
   writeJson,
+  writeTaskReview,
 } from './helpers.mjs';
 
 function addModuleAndTask(dir) {
@@ -58,6 +59,46 @@ test('modules and tasks validate', (t) => {
   const result = runJson(['state', 'validate', '--project', dir]);
   assert.equal(result.code, 0, result.stdout + result.stderr);
   assert.equal(result.json.ok, true);
+});
+
+test('task reviews under reviews/tasks validate cleanly', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeTaskReview(dir, { moduleId: 'M01', taskId: 'TASK-0001' });
+
+  const result = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(result.code, 0, result.stdout + result.stderr);
+  assert.equal(result.json.ok, true);
+});
+
+test('task reviews must reference an existing task', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeTaskReview(dir, { moduleId: 'M01', taskId: 'TASK-9999' });
+
+  const result = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(result.code, 1);
+  assert.match(result.json.errors.join(' '), /unknown task TASK-9999/);
+});
+
+test('a top-level task review points to reviews/tasks', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeTaskReview(dir, {
+    moduleId: 'M01',
+    taskId: 'TASK-0001',
+    topLevel: true,
+  });
+
+  const result = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(result.code, 1);
+  assert.match(result.json.errors.join(' '), /reviews\/tasks\//);
 });
 
 test('state validation catches a dangling current_module', (t) => {

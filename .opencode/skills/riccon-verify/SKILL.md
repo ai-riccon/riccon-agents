@@ -98,7 +98,9 @@ T4 额外要求：威胁建模、负载/性能测试、容灾/回滚演练、明
 
 ## 7. 评审报告
 
-写 `.riccon/reviews/<module>-review.md`，带 YAML front matter：
+模块评审写 `.riccon/reviews/<module>-review.md`。任务级/架构级独立评审写 `.riccon/reviews/tasks/<task>-review.md`，使用 `task-review.schema.json` 和 `templates/state/task-review.md`；任务评审不参与模块 gate，但高风险任务 closeout 必须引用。
+
+模块评审带 YAML front matter：
 
 ```yaml
 review_id: REV-M01-001

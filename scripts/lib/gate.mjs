@@ -122,6 +122,13 @@ function findReview(projectDir, moduleId, module, reviews) {
     if (!parsed.hasFrontmatter) {
       return { file, data: null, error: `${relative(projectDir, file)} is missing front matter` };
     }
+    if (parsed.data?.task_id) {
+      return {
+        file,
+        data: null,
+        error: `${relative(projectDir, file)} is a task review; task-level reviews belong in .riccon/reviews/tasks/`,
+      };
+    }
     const check = validateSchema('review.schema.json', parsed.data);
     return {
       file,
@@ -130,7 +137,9 @@ function findReview(projectDir, moduleId, module, reviews) {
     };
   }
 
-  const match = reviews.find((record) => record.data?.module_id === moduleId);
+  const match = reviews.find(
+    (record) => record.data?.module_id === moduleId && !record.data?.task_id,
+  );
   return match ? { file: match.file, data: match.data, error: match.error } : null;
 }
 

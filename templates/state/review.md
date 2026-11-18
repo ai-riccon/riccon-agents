@@ -1,4 +1,6 @@
 ---
+# 模块评审模板；任务级/架构级评审使用 templates/state/task-review.md，
+# 并写到 .riccon/reviews/tasks/，不要放在 reviews/ 顶层。
 review_id: REV-M01-001
 module_id: M01
 verifier: riccon/verifier
