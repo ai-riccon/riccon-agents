@@ -315,7 +315,7 @@ permissions:
 3. **构建**：给 `riccon/builder` 自包含 brief；一个 agent 同时最多 1 个 active task；最多 2–3 个 builder 且写入范围不重叠。Builder 只把任务移到 review，不自己 done。
 4. **验证**：在新上下文 spawn `riccon/verifier`；verifier 读需求和 diff，运行合同声明的命令，写 review。
 5. **门禁**：运行 `gate check`；失败就退回，不降低门禁标准。
-6. **评审包与产品验收**：给用户一页摘要，包含 demo、证据链接、风险、开放决策、下一模块和 veto 截止时间。模块 gate 通过后，用 `docs/ACCEPTANCE.md` 记录用户对 AC 和用户可见结果的验收结论（accepted/rejected/conditional）；未 accepted 不进入下一个用户可见模块。
+6. **评审包与产品验收**：给用户一页摘要，包含 demo、证据链接、风险、开放决策、下一模块和 veto 截止时间。模块 gate 通过后，先由 Product 在 `docs/ACCEPTANCE.md` 做预验收（需求一致性、UX/文案/范围）；只有 Product 预验收 `pass` 后才提交用户最终验收（accepted/rejected/conditional）。未 accepted 不进入下一个用户可见模块。
 7. **发布**：全部模块 done 后，运行 `sandbox check`；T4 还要有威胁模型、负载测试和回滚演练，`sandbox.evidence` 必须是 `commands.sandbox` 的 passing EV。创建 `release new` 记录，等用户明确批准后运行 `decision answer --kind approve --release REL-0001`，再 `release approve`，最后 `release check`。T4 staging/production 还需要第二模型复核的独立 review 文件（绑定同一 release/version/environment），不是任意 EV。
 8. **交接**：会话结束前更新状态、任务和 handoff。
 

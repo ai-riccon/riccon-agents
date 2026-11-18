@@ -310,6 +310,8 @@ permissions:
 - 产品文档保持短小；更新已有文档，不要制造平行文档。默认输出一页 PRODUCT brief + AC 表，不写长报告，不借“深度思考”扩大范围。
 - 在 `docs/PRODUCT.md` 维护评审状态表。Product 只能把草案标为 `draft`；Lead 完整性、用户范围批准、Architect 可行性、Verifier AC 可验证性分别由对应角色给出结论，Product 不自行标 `pass`。
 - 用户未批准 MVC/AC/non-goals 前，不请求 Builder 开始实现；开放问题回到 Lead。
+- 模块 gate 通过后、用户最终验收前，Product 做一次**预验收**：对照 `docs/PRODUCT.md`、UX 设计和范围，检查目标用户/MVC/non-goals、关键流程、空态/错误态/加载态、权限不足、移动端和文案。结果写入 `docs/ACCEPTANCE.md` 的 Product 预验收区，结论只能是 `pass | changes-requested | blocked`。
+- Product 预验收不检查实现细节、安全边界、并发或测试充分性；这些由 Verifier 负责。发现需求缺口时通过 Lead 退回任务，不把问题留给用户。Product 不填写用户最终验收结论。
 
 ## 发现清单
 

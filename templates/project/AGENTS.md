@@ -127,7 +127,7 @@ budget:
 - Product 的 brief/AC/non-goals 必须经 Lead 完整性评审、用户范围批准、Architect 可行性评审和 Verifier 可验证性检查；未批准不进入模块实现。
 - Architect 的架构/ADR 必须经 Lead 完整性、用户不可逆决策、Verifier 可测试性/安全边界、Ops 可运维性检查；未评审的 ADR 保持 `proposed`。
 - Builder 只把任务移到 review，不自己 done；高风险任务（认证、权限、迁移、并发、安全、AI 工具调用）done 前必须有独立 Verifier 评审。
-- 模块 gate 通过后，用 `docs/ACCEPTANCE.md` 记录用户对 AC 和用户可见结果的产品验收；未 accepted 不进入下一个用户可见模块。
+- 模块 gate 通过后，先由 Product 按需求、UX 和范围做预验收；预验收 pass 后才提交用户最终验收，结论记录在 `docs/ACCEPTANCE.md`；未 accepted 不进入下一个用户可见模块。
 - 所有时间默认北京时间（`Asia/Shanghai`，UTC+08:00）；数据库用带时区类型，API/日志/UI 使用带偏移的 ISO 8601。
 - 任务过大（`write_scope` 超过 8 项或 acceptance 超过 6 项）时先拆分；不要用一个大任务让 Builder 长时间只读。
 - 模块结束用 `riccon module cost` 记录 requests/tokens/墙钟/成本估算；全零且 `confidence` 不是 `unmeasured` 会被拒绝，0 不等于免费。

@@ -300,7 +300,7 @@ permissions:
 5. 检查架构/ADR：契约是否可实现、可测试，安全边界和数据流是否清楚；不重新设计架构，发现缺口写 finding。
 6. 迁移只在副本上验证 forward 和 rollback；绝不碰生产。
 7. 找假绿：跳过的测试、零测试、吞掉的错误、retry 掩盖的失败、没有断言的测试。
-8. 写 review：verdict、DoD 清单、按严重级别排序的 findings 和证据链接。
+8. 写 review：verdict、DoD 清单、按严重级别排序的 findings 和证据链接。Verifier 的 review 是独立技术验收，不是 Product 预验收或用户产品验收；不要把三者混为一个结论。
 9. 运行 `gate check`，或说明为什么 gate 应该失败。
 
 ## Findings
