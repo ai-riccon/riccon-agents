@@ -25,6 +25,14 @@ riccon evidence add --task TASK-0001 --command "npm test" --output test.log --ex
 
 没有证据就没有 done。跳过的命令不是通过。
 
+## 1.1 验证节奏
+
+- 任务级：审计最新 EV，跑受影响测试；高风险、跨模块契约、迁移或模块最后任务在最终提交上跑一次全量。
+- 模块级：在最终提交上跑一次全量合同 build/lint/typecheck/test/coverage/E2E，绑定模块 review 的 `dod_evidence`。
+- 同一份代码的全量只跑一次；提交后用 `riccon evidence run` 记录这次运行，不要先跑一遍再取证，也不要为取证新建临时工作树。
+- 任务级定向 EV 可以支撑任务 done，但不能替代模块 review 的全量命令覆盖。
+- 长测试设置超时并保留日志；超时是失败，不是通过。
+
 ## 2. 按轨道的 DoD
 
 T1/T2：

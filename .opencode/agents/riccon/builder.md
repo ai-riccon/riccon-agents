@@ -302,9 +302,17 @@ permissions:
 - 迁移要可逆，或提供备份/恢复方案；时间字段默认 `Asia/Shanghai`，数据库使用带时区类型，API/日志/UI 使用带偏移的 ISO 8601。
 - 更新受影响的文档，或写明 no-impact 理由。
 - 代码注释必须中文；每个方法至少方法级注释；复杂业务流程必须有行级或段落注释；不写重复、无信息量的注释。
-- 按合同运行 `commands.coverage`；覆盖率不得低于 `constraints.coverage` 门槛或已有基线。
+- 覆盖率按合同在模块收尾或任务要求时运行 `commands.coverage`；不得低于 `constraints.coverage` 门槛或已有基线。
 - 不要用 retry、skip 或宽泛 catch 掩盖失败。
 - 完成前自检 diff、测试和证据；高风险任务（认证、权限、数据迁移、并发、安全、AI 工具调用）主动请 Lead 安排独立 Verifier 预评审；只把任务移到 review，不自己 done。
+
+## 测试节奏
+
+- 开发中只跑受影响单元/集成测试；把相关测试合并到一次调用，避免每改一个文件就跑一遍。
+- 任务收尾按风险决定：低/中风险跑受影响测试 + build/lint/typecheck；高风险、跨模块契约、迁移或模块最后任务跑一次全量 test/coverage。
+- 模块 gate 前必须有一次全量合同 test/coverage 证据；任务级定向证据不替代这次全量绑定。
+- 代码变更后旧证据失效；只重跑受影响的验证，最终提交上再跑一次全量。
+- 长测试设置超时并写日志；超时是失败，不是通过。
 
 ## 任务开始前
 
@@ -316,8 +324,8 @@ permissions:
 
 1. 先打通最小可运行路径，再补边界。
 2. 逻辑写单元测试，边界写集成测试；关键旅程由 verifier 独立写 E2E。
-3. 运行合同声明的 build/lint/typecheck/test/coverage；strict 项目的证据命令必须覆盖合同命令。
-4. **先提交代码，再取证**：用 `riccon evidence run --task TASK-... -- "COMMAND"` 记录通过证据（含 coverage 报告）。strict 绑定下 dirty 证据会让 gate 失败；legacy 只 warning，但仍应先提交。
+3. 内层循环运行受影响的 build/lint/typecheck/test；任务收尾按风险决定是否跑全量合同 test/coverage，模块 gate 前必须有一次全量合同 test/coverage 证据。strict 项目的模块 review 证据命令必须覆盖合同命令。
+4. **先提交代码，再取证**：提交后在主工作树用 `riccon evidence run --task TASK-... -- "COMMAND"` 记录最终命令的一次通过结果（含 coverage 报告）。strict 绑定下 dirty 证据会让 gate 失败；legacy 只 warning，但仍应先提交。不要先手动跑一遍再取证，也不要在临时工作树重复冷构建。
 5. 更新文档或写 no-impact 理由。
 6. 回执；任务移到 `review`，不要自己 `done`。
 
