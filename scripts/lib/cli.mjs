@@ -118,10 +118,15 @@ Usage:
   riccon state show [--project DIR] [--json]
   riccon module new --title TITLE [--id M01] [--kind mvc|feature|fix]
               [--goal TEXT] [--depends-on M01] [--acceptance TEXT]
+              [--fixes M03] [--split-from M03] [--alias M03b]
               [--wall-clock-limit 8] [--project DIR] [--json]
   riccon module update M01 --status planned|building|verifying|review_pending|done|blocked
               [--blocker TEXT] [--clear-blocker] [--wall-clock-limit 8]
-              [--project DIR] [--json]
+              [--fixes M03] [--split-from M03] [--alias M03b]
+              [--product-status pending|pass|changes-requested|blocked]
+              [--user-status pending|accepted|rejected|conditional]
+              [--acceptance-decision DEC-0001] [--acceptance-ref PATH]
+              [--acceptance-note TEXT] [--force] [--project DIR] [--json]
   riccon module cost M01 [--requests N] [--input-tokens N] [--output-tokens N]
               [--wall-clock-minutes N] [--cost-usd N]
               [--confidence unmeasured|estimated|measured]
@@ -571,6 +576,31 @@ function cmdState(args) {
         errors.push(`task ${taskId} belongs to ${task.module_id}, not ${module.id}`);
       }
     }
+    const moduleTasks = tasks.filter((task) => task.module_id === module.id);
+    if (['planned', 'blocked'].includes(module.status)) {
+      const startedTasks = moduleTasks.filter((task) =>
+        ['in_progress', 'review', 'done'].includes(task.status),
+      );
+      if (startedTasks.length) {
+        warnings.push(
+          `module ${module.id} is ${module.status} but has started/done tasks: ${startedTasks
+            .map((task) => `${task.id}=${task.status}`)
+            .join(', ')}; legacy state must be normalized before new work`,
+        );
+      }
+    }
+    if (module.status === 'done') {
+      const unfinishedTasks = moduleTasks.filter(
+        (task) => task.status !== 'done',
+      );
+      if (unfinishedTasks.length) {
+        errors.push(
+          `module ${module.id} is done but has unfinished tasks: ${unfinishedTasks
+            .map((task) => `${task.id}=${task.status}`)
+            .join(', ')}`,
+        );
+      }
+    }
     if (module.review) {
       const reviewPath = resolve(projectDir, module.review);
       if (!exists(reviewPath)) {
@@ -674,6 +704,9 @@ function cmdModule(args) {
       'depends-on': { type: 'string', multiple: true, default: [] },
       acceptance: { type: 'string', multiple: true, default: [] },
       'wall-clock-limit': { type: 'string' },
+      fixes: { type: 'string' },
+      'split-from': { type: 'string' },
+      alias: { type: 'string', multiple: true, default: [] },
     });
     if (!values.title) fail('module new requires --title');
     const projectDir = resolve(values.project);
@@ -687,6 +720,9 @@ function cmdModule(args) {
       wallClockLimitHours: values['wall-clock-limit']
         ? Number(values['wall-clock-limit'])
         : undefined,
+      fixesModule: values.fixes,
+      splitFrom: values['split-from'],
+      aliases: values.alias,
     });
     printJson(values.json, { ok: true, module });
     printHuman(values.json, `created module ${module.id}: ${module.title}`);
@@ -700,10 +736,33 @@ function cmdModule(args) {
       'clear-blocker': { type: 'boolean', default: false },
       'wall-clock-limit': { type: 'string' },
       review: { type: 'string' },
+      fixes: { type: 'string' },
+      'split-from': { type: 'string' },
+      alias: { type: 'string', multiple: true, default: [] },
+      'product-status': { type: 'string' },
+      'user-status': { type: 'string' },
+      'acceptance-decision': { type: 'string' },
+      'acceptance-ref': { type: 'string' },
+      'acceptance-note': { type: 'string' },
+      force: { type: 'boolean', default: false },
     });
     const moduleId = positionals[0];
     if (!moduleId) fail('module update requires a module id');
     const projectDir = resolve(values.project);
+    const productAcceptance =
+      values['product-status'] !== undefined ||
+      values['user-status'] !== undefined ||
+      values['acceptance-decision'] !== undefined ||
+      values['acceptance-ref'] !== undefined ||
+      values['acceptance-note'] !== undefined
+        ? {
+            productStatus: values['product-status'],
+            userStatus: values['user-status'],
+            decisionId: values['acceptance-decision'],
+            ref: values['acceptance-ref'],
+            note: values['acceptance-note'],
+          }
+        : undefined;
     const module = updateModule(projectDir, moduleId, {
       status: values.status,
       blocker: values.blocker,
@@ -712,6 +771,11 @@ function cmdModule(args) {
         ? Number(values['wall-clock-limit'])
         : undefined,
       review: values.review,
+      fixesModule: values.fixes,
+      splitFrom: values['split-from'],
+      aliases: values.alias,
+      force: values.force,
+      productAcceptance,
     });
     printJson(values.json, { ok: true, module });
     printHuman(values.json, `updated module ${module.id}: ${module.status}`);

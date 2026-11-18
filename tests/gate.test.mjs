@@ -12,6 +12,7 @@ import {
   run,
   runJson,
   setModuleStartedHoursAgo,
+  setModuleStatus,
   tempDir,
   writeDecision,
   writeJson,
@@ -461,6 +462,18 @@ test("module done refuses without a review, then succeeds", (t) => {
   assert.match(fail.stderr, /gate failed/);
 
   writeReview(dir);
+  assert.equal(
+    run([
+      "module",
+      "update",
+      "M01",
+      "--product-status",
+      "pass",
+      "--project",
+      dir,
+    ]).code,
+    0,
+  );
   const pass = run([
     "module",
     "update",
@@ -478,11 +491,55 @@ test("module done refuses without a review, then succeeds", (t) => {
   assert.equal(status.json.gate.status, "pass");
 });
 
+test("module done requires Product pre-acceptance", (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  prepareModule(dir);
+  writeReview(dir);
+
+  const blocked = run([
+    "module",
+    "update",
+    "M01",
+    "--status",
+    "done",
+    "--project",
+    dir,
+  ]);
+  assert.equal(blocked.code, 1);
+  assert.match(blocked.stderr, /Product pre-acceptance is pending/);
+
+  assert.equal(
+    run([
+      "module",
+      "update",
+      "M01",
+      "--product-status",
+      "pass",
+      "--project",
+      dir,
+    ]).code,
+    0,
+  );
+  const done = run([
+    "module",
+    "update",
+    "M01",
+    "--status",
+    "done",
+    "--project",
+    dir,
+  ]);
+  assert.equal(done.code, 0, done.stderr);
+});
+
 test("gate on a planned module fails", (t) => {
   const dir = tempDir();
   t.after(() => cleanup(dir));
   assert.equal(initProject(dir).code, 0);
   addModuleAndTask(dir);
+  setModuleStatus(dir, "M01", "planned");
 
   const result = runJson([
     "gate",
@@ -870,6 +927,11 @@ test("gate --require-scope rejects post-end changes when no task declares a writ
   assert.equal(created.code, 0, created.stderr);
   const task = created.json.task;
   assert.deepEqual(task.write_scope, []);
+  assert.equal(
+    run(['module', 'update', module.json.module.id, '--status', 'building', '--project', dir])
+      .code,
+    0,
+  );
   git('add', '-A');
   git('commit', '-qm', 'baseline');
   for (const status of ['ready', 'in_progress']) {

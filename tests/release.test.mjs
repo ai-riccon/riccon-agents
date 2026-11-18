@@ -46,6 +46,22 @@ function completeModule(dir) {
 
 function finishModule(dir, taskId) {
   writeReview(dir);
+  const acceptance = run([
+    'module',
+    'update',
+    'M01',
+    '--product-status',
+    'pass',
+    '--user-status',
+    'accepted',
+    '--acceptance-decision',
+    'DEC-0001',
+    '--acceptance-ref',
+    'docs/ACCEPTANCE.md',
+    '--project',
+    dir,
+  ]);
+  assert.equal(acceptance.code, 0, acceptance.stderr);
   const result = run(['module', 'update', 'M01', '--status', 'done', '--project', dir]);
   assert.equal(result.code, 0, result.stderr);
   assert.ok(taskId);

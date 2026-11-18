@@ -95,6 +95,22 @@ test('toy project: init → task → evidence → gate fail → gate pass → ha
   assert.equal(pass.code, 0, pass.json.errors.join('; '));
   assert.equal(pass.json.ok, true);
 
+  assert.equal(
+    run([
+      'module',
+      'update',
+      'M01',
+      '--product-status',
+      'pass',
+      '--user-status',
+      'accepted',
+      '--acceptance-decision',
+      'DEC-0001',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
   const done = run([
     'module',
     'update',

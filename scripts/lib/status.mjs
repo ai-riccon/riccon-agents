@@ -53,6 +53,41 @@ export function getStatus(projectDir) {
         String(a.data.handoff_id).localeCompare(String(b.data.handoff_id)),
       )
       .at(-1) || null;
+  const lastDoneModule = modules
+    .filter((module) => module.status === 'done')
+    .sort(
+      (a, b) =>
+        Date.parse(a.finished_at || '') - Date.parse(b.finished_at || ''),
+    )
+    .at(-1);
+  const handoffStale = Boolean(
+    lastDoneModule?.finished_at &&
+      (!latestHandoff?.data?.created_at ||
+        Date.parse(latestHandoff.data.created_at) <
+          Date.parse(lastDoneModule.finished_at)),
+  );
+  const openAcceptance = modules
+    .filter((module) => {
+      if (module.status === 'planned') return false;
+      const acceptance = module.product_acceptance;
+      if (!acceptance) return false;
+      return (
+        ['pending', 'changes-requested', 'blocked'].includes(
+          acceptance.product_status,
+        ) ||
+        ['pending', 'rejected', 'conditional'].includes(acceptance.user_status)
+      );
+    })
+    .map((module) => ({
+      id: module.id,
+      title: module.title,
+      status: module.status,
+      product_status: module.product_acceptance.product_status,
+      user_status: module.product_acceptance.user_status,
+      fixes: modules
+        .filter((item) => item.fixes_module === module.id)
+        .map((item) => ({ id: item.id, status: item.status })),
+    }));
 
   return {
     project: {
@@ -75,6 +110,10 @@ export function getStatus(projectDir) {
             : 0,
           wall_clock_limit_hours: current.wall_clock_limit_hours || 8,
           budget_usage: current.budget_usage || null,
+          product_acceptance: current.product_acceptance || null,
+          fixes_module: current.fixes_module || null,
+          split_from: current.split_from || null,
+          aliases: current.aliases || [],
         }
       : null,
     gate: state.gate,
@@ -90,6 +129,12 @@ export function getStatus(projectDir) {
       : { ok: true, warnings: contract.warnings },
     last_handoff: state.last_handoff,
     latest_handoff: latestHandoff?.data || null,
+    handoff_status: {
+      stale: handoffStale,
+      last_done_module: lastDoneModule?.id || null,
+      last_done_at: lastDoneModule?.finished_at || null,
+    },
+    acceptance_open: openAcceptance,
     next_action: state.next_action,
     budget_usage: state.budget_usage,
   };
@@ -118,6 +163,12 @@ export function renderStatus(status) {
         }`,
       );
     }
+    if (module.product_acceptance) {
+      const acceptance = module.product_acceptance;
+      lines.push(
+        `acceptance: product=${acceptance.product_status} user=${acceptance.user_status}`,
+      );
+    }
   } else {
     lines.push('current: none');
   }
@@ -140,7 +191,27 @@ export function renderStatus(status) {
   lines.push(
     `contract: ${status.contract.ok ? 'ok' : 'invalid'}${status.contract.warnings?.length ? ` (${status.contract.warnings.length} warnings)` : ''}`,
   );
-  lines.push(`last handoff: ${status.last_handoff || 'none'}`);
+  if (status.acceptance_open?.length) {
+    lines.push(
+      `acceptance open: ${status.acceptance_open
+        .map(
+          (item) =>
+            `${item.id} product=${item.product_status} user=${item.user_status}${
+              item.fixes.length
+                ? ` (fix ${item.fixes.map((fix) => `${fix.id} ${fix.status}`).join(', ')})`
+                : ''
+            }`,
+        )
+        .join('; ')}`,
+    );
+  }
+  lines.push(
+    `last handoff: ${status.last_handoff || 'none'}${
+      status.handoff_status?.stale
+        ? ` (stale; last done ${status.handoff_status.last_done_module || 'unknown'})`
+        : ''
+    }`,
+  );
   lines.push(`next: ${status.next_action}`);
   return lines.join('\n');
 }

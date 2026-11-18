@@ -160,7 +160,7 @@ handoff 写状态和确切下一步，不贴日志；新会话从 `.riccon/` + h
 
 T1/T2：build、相关测试、review、证据。
 
-T3/MVC：验收、build/lint/typecheck、单元/集成/契约测试、关键 E2E、可访问性基线、安全基线、性能预算、迁移回滚、文档、证据、独立 verifier 签字、没有开放 P0/P1。
+T3/MVC：验收、build/lint/typecheck、单元/集成/契约测试、关键 E2E、可访问性基线、安全基线、性能预算、迁移回滚、文档、证据、独立 verifier 签字、没有开放 P0/P1。模块 done 前 Product 预验收必须 pass；用户 accepted 后才进入下一个用户可见模块；验收修复用 `kind: fix` + `fixes_module`，split 用 `split_from`/`aliases` 记录。
 
 T4：T3 加威胁建模、负载/性能测试、容灾/回滚演练和明确发布批准。
 

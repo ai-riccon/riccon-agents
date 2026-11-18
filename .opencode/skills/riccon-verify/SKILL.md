@@ -35,6 +35,8 @@ riccon evidence add --task TASK-0001 --command "npm test" --output test.log --ex
 
 ## 2. 按轨道的 DoD
 
+AC 对账必须引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据。模块 gate 通过后、标记 done 前完成 Product 预验收；用户最终验收未 accepted 前不启动下一个用户可见模块。
+
 T1/T2：
 
 - 变更面的 build/lint/typecheck；

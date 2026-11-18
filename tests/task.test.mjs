@@ -34,6 +34,16 @@ function addTask(dir) {
     dir,
   ]);
   assert.equal(task.code, 0, task.stderr);
+  const started = run([
+    'module',
+    'update',
+    'M01',
+    '--status',
+    'building',
+    '--project',
+    dir,
+  ]);
+  assert.equal(started.code, 0, started.stderr);
   return task.json.task;
 }
 
@@ -171,6 +181,20 @@ test('module dependencies gate the start of a module', (t) => {
   assert.match(locked.stderr, /cannot start until dependency M01 is done/);
 
   setModuleStatus(dir, 'M01', 'done');
+  assert.equal(
+    run([
+      'module',
+      'update',
+      'M01',
+      '--product-status',
+      'pass',
+      '--user-status',
+      'accepted',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
   const unlocked = run([
     'module',
     'update',
@@ -181,6 +205,149 @@ test('module dependencies gate the start of a module', (t) => {
     dir,
   ]);
   assert.equal(unlocked.code, 0, unlocked.stderr);
+});
+
+test('task cannot start before its module is building', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  assert.equal(
+    run(['module', 'new', '--title', 'MVC', '--kind', 'mvc', '--project', dir]).code,
+    0,
+  );
+  const task = runJson([
+    'task',
+    'new',
+    '--module',
+    'M01',
+    '--title',
+    'Build the toy',
+    '--project',
+    dir,
+  ]);
+  assert.equal(task.code, 0, task.stderr);
+  assert.equal(
+    run(['task', 'update', 'TASK-0001', '--status', 'ready', '--project', dir]).code,
+    0,
+  );
+  const blocked = run([
+    'task',
+    'update',
+    'TASK-0001',
+    '--status',
+    'in_progress',
+    '--project',
+    dir,
+  ]);
+  assert.equal(blocked.code, 1);
+  assert.match(blocked.stderr, /expected building/);
+
+  assert.equal(
+    run(['module', 'update', 'M01', '--status', 'building', '--project', dir]).code,
+    0,
+  );
+  assert.equal(
+    run(['task', 'update', 'TASK-0001', '--status', 'in_progress', '--project', dir]).code,
+    0,
+  );
+});
+
+test('product acceptance blocks a feature but allows a linked fix', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  assert.equal(
+    run(['module', 'new', '--title', 'MVC', '--kind', 'mvc', '--project', dir]).code,
+    0,
+  );
+  setModuleStatus(dir, 'M01', 'done');
+  assert.equal(
+    run([
+      'module',
+      'update',
+      'M01',
+      '--product-status',
+      'changes-requested',
+      '--user-status',
+      'pending',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
+  assert.equal(
+    run([
+      'module',
+      'new',
+      '--title',
+      'Next feature',
+      '--depends-on',
+      'M01',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
+  const blocked = run([
+    'module',
+    'update',
+    'M02',
+    '--status',
+    'building',
+    '--project',
+    dir,
+  ]);
+  assert.equal(blocked.code, 1);
+  assert.match(blocked.stderr, /acceptance is product=changes-requested/);
+  assert.equal(
+    run([
+      'module',
+      'update',
+      'M02',
+      '--status',
+      'building',
+      '--force',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
+
+  assert.equal(
+    run([
+      'module',
+      'new',
+      '--title',
+      'Fix M01 acceptance',
+      '--kind',
+      'fix',
+      '--fixes',
+      'M01',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
+  const fix = runJson(['module', 'show', 'M03', '--project', dir, '--json']);
+  assert.equal(fix.json.fixes_module, 'M01');
+  assert.ok(fix.json.depends_on.includes('M01'));
+  assert.equal(
+    run([
+      'module',
+      'update',
+      'M03',
+      '--status',
+      'building',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
+  const status = runJson(['status', '--project', dir]);
+  const open = status.json.acceptance_open.find((item) => item.id === 'M01');
+  assert.ok(open);
+  assert.equal(open.product_status, 'changes-requested');
+  assert.ok(open.fixes.some((fix) => fix.id === 'M03'));
 });
 
 test('module review_pending requires all tasks done', (t) => {
@@ -562,6 +729,63 @@ test('task new warns when write scope or acceptance suggests splitting', (t) => 
   assert.equal(task.json.warnings.length, 1);
   assert.match(task.json.warnings[0], /write_scope has 9 entries/);
   assert.match(task.stderr, /split the task/);
+});
+
+test('task new warns at six acceptance items', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  assert.equal(
+    run(['module', 'new', '--title', 'MVC', '--kind', 'mvc', '--project', dir]).code,
+    0,
+  );
+  const acceptance = Array.from({ length: 6 }, (_, index) => [
+    '--acceptance',
+    `AC ${index + 1}`,
+  ]).flat();
+  const task = runJson([
+    'task',
+    'new',
+    '--module',
+    'M01',
+    '--title',
+    'Too many outcomes',
+    '--project',
+    dir,
+    ...acceptance,
+  ]);
+  assert.equal(task.code, 0, task.stderr);
+  assert.equal(task.json.warnings.length, 1);
+  assert.match(task.json.warnings[0], /independently verifiable outcomes/);
+});
+
+test('module split records relation and alias', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  assert.equal(
+    run(['module', 'new', '--title', 'MVC', '--kind', 'mvc', '--project', dir]).code,
+    0,
+  );
+  assert.equal(
+    run([
+      'module',
+      'new',
+      '--title',
+      'Second half',
+      '--split-from',
+      'M01',
+      '--alias',
+      'M01b',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
+  const module = runJson(['module', 'show', 'M02', '--project', dir, '--json']);
+  assert.equal(module.json.split_from, 'M01');
+  assert.deepEqual(module.json.aliases, ['M01b']);
+  assert.ok(module.json.depends_on.includes('M01'));
 });
 
 test('module cost records estimates and rejects zero as free', (t) => {

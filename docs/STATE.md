@@ -46,7 +46,7 @@ Phases：`init`、`contract`、`discovery`、`mvc`、`modules`、`release`、`op
 
 ### 模块
 
-`modules/M01.json`：`id`、`title`、`goal`、`kind`（`mvc|feature|fix`）、`status`、`depends_on`、`acceptance`、`tasks`、`review`、`wall_clock_limit_hours`、`started_at`、`finished_at`、`budget_usage`。
+`modules/M01.json`：`id`、`title`、`goal`、`kind`（`mvc|feature|fix`）、`status`、`depends_on`、`acceptance`、`tasks`、`review`、`fixes_module`、`split_from`、`aliases`、`product_acceptance`、`wall_clock_limit_hours`、`started_at`、`finished_at`、`budget_usage`。
 
 模块状态：
 
@@ -55,7 +55,7 @@ planned → building → verifying → review_pending → done
    任意活动状态 → blocked → planned/building/verifying
 ```
 
-依赖全部 `done` 后模块才能进入 `building`。`review_pending` 需要至少一个任务且所有任务 `done`；它不是未完成工作的等待区。`done` 表示 gate 通过，下一个模块可以开始。
+依赖全部 `done` 后模块才能进入 `building`。`review_pending` 需要至少一个任务且所有任务 `done`；它不是未完成工作的等待区。`done` 表示 gate 通过且 Product 预验收 `pass`；用户最终验收是独立状态（`product_acceptance.user_status`），未 `accepted` 前不启动下一个用户可见模块。验收失败的修复用 `kind: fix` + `fixes_module: Mxx`，或在显式决策后重新打开；不能只靠标题说明关系。`split_from`/`aliases` 记录模块拆分和别名（例如 M10 的 `M03b`），不改变数字 ID 规则。`state validate` 会把 planned/blocked 模块里已有 in_progress/review/done 任务标为 warning（遗留状态，必须先归位再开始新工作），并拒绝 done 模块里仍有未完成任务。`module update --force` 只用于把旧项目的这种遗留状态归位，不得用于绕过新的验收/依赖检查。
 
 ### 任务
 
@@ -70,7 +70,7 @@ planned → ready → in_progress → review → done
 
 `review` 和 `done` 至少需要一条证据。`done` 还需要至少一条**执行证据**（`manual: false`），且该任务最后一条执行证据必须 `exit_code: 0`；只有手工 `evidence add` 证据不能建立 done。strict 绑定要求先提交再取证：`dirty: true` 的证据会让 gate 失败（legacy 只 warning）。`true`、`:`、`exit 0`、`echo`/`sleep` 这类 no-op，以及 `|| true` 掩盖失败的命令，不能建立 done。内核会重算 `output_sha256` 和 `output_bytes`，并校验证据归属；日志被改动、路径越界或记录属于别的任务都会失败。失败命令是证据，但不是通过。
 
-任务创建时如果 `write_scope` 超过 8 项或 acceptance 超过 6 项，CLI 会提示拆分（`warnings` 字段）；这是粒度提示，不是硬限制。
+任务创建时如果 `write_scope` 超过 8 项或 acceptance 达到 6 项，CLI 会提示拆分（`warnings` 字段）；这是粒度提示，不是硬限制。拆分按“一个可独立验收的用户可见结果”判断，不要只看数量；多个页面/入口/用户动作应拆成多个任务。任务进入 `in_progress` 前，模块必须是 `building`，且模块依赖全部 done。
 
 任务第一次进入 `in_progress` 时记录 `baseline_commit`，之后 review/blocked 再回到 in_progress 不会重置 baseline；同时按 owner 写入 `state.active_tasks`；同一 owner 已有另一个 in-progress 任务时拒绝，活跃任务改 owner 也会检查目标 owner 是否被占用，除非显式 `--force`。进入 `review`/`done` 时，内核用 git 比较 baseline 以来的 tracked/untracked 变更；`write_scope` 之外的文件会导致失败（`.riccon/`、`.codegraph/`、`node_modules/` 除外）。done 任务必须有可解析、且是 HEAD 祖先的 `end_commit`；无 git 却记录 commit、done 缺 `end_commit`、无效/倒退 commit 都 fail-closed。并行任务可用 `task update --baseline-commit SHA --end-commit SHA` 显式设置范围：commit 必须存在且是 HEAD 祖先，baseline 必须是 end 的祖先；`--end-commit` 只允许 review/done。module gate 在 `--require-scope` 下还会检查“每个 done 任务 end_commit 之后提交的文件是否落在全项目任一任务的 write_scope 内”，因此 end_commit 之后的已提交越界改动也会失败。没有 baseline 的旧任务在普通 gate 产生 `task-scope-unverified` warning，在 `--require-scope` 下失败。
 
@@ -135,7 +135,7 @@ Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/
 
 `handoffs/handoff-0001.md` front matter：`handoff_id`、`session`、`summary`、`next`、`invariants`、`risks`、`first_read`、`quality_gate`、`created_at`。
 
-`riccon handoff new` 会先检查：没有 `in_progress`/`review` 任务；done 任务都有证据；phase 为 modules/release/operate 时 module gate 为 pass，且 gate 的 module 必须是当前/最后一个 done 模块；gate 的 `checked_at` 不能早于最新任务或评审；release gate 不是 fail，operate 阶段必须 pass；`next` 非空且不是占位词；`first_read` 非空且路径存在。任一项失败就拒绝写 handoff。`first_read` 传空数组会回退默认列表，不会绕过检查。
+`riccon handoff new` 会先检查：没有 `in_progress`/`review` 任务；done 任务都有证据；phase 为 modules/release/operate 时 module gate 为 pass，且 gate 的 module 必须是当前/最后一个 done 模块；gate 的 `checked_at` 不能早于最新任务或评审；release gate 不是 fail，operate 阶段必须 pass；`next` 非空且不是占位词；`first_read` 非空且路径存在。任一项失败就拒绝写 handoff。`first_read` 传空数组会回退默认列表，不会绕过检查。`quality_gate.product_acceptance_open` 记录尚未完成的 Product/用户验收；`riccon status` 会在 last handoff 早于最后一个 done 模块时标记 `stale`。
 
 触发时机：每个模块 gate 完成后、phase 切换、发出决策/评审包后、会话暂停超过 24h、切换项目/风险等级/模型、进入 T4/生产批准前。输入接近 120K tokens、300/440 steps、60 次工具调用或自动 compaction 一次只是**检查点**，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须满足：状态/证据/review/gate 已更新、代码文档可恢复、没有半写文件/未完成 subagent/未应用决策、`next` 可直接执行、新会话无需重读旧聊天。任何一项不满足就继续或标 blocked；不得为了省成本跳过测试、E2E、独立 review 或证据。handoff 不替代 gate、review 或用户批准。handoff 后新开 session 运行 `/riccon-resume`。
 
@@ -162,6 +162,7 @@ Gate 结果写入 `state.gate`。`riccon module update M01 --status done` 会运
 
 - 合同有效，phase 为 `release` 或 `operate`；
 - 所有模块 `done`；
+- 每个模块的 `product_acceptance.product_status` 为 `pass` 且 `user_status` 为 `accepted`（旧模块无记录时只 warning）；
 - 发布记录存在且状态为 `approved`/`released`；
 - 批准决策存在、已 `answered`、owner 为 `user`、`answer_kind: approve`，并绑定同一 `release_id` 和 `environment`；`answer_sha256` 匹配，时间线不倒置；有新审批时 `release_sha256` 必须匹配当前 version/scope/artifacts 原始字节、EV JSON/日志、绑定该 release 的 RELEASE 评审与第二评审文件；
 - 发布 evidence 全部存在、属于已知任务、哈希匹配、非 manual、exit 0；

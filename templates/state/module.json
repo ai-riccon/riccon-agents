@@ -7,11 +7,21 @@
   "status": "planned",
   "blocker": null,
   "depends_on": [],
-  "acceptance": [
-    "The critical journey works end-to-end and is demoable."
-  ],
+  "acceptance": ["The critical journey works end-to-end and is demoable."],
   "tasks": [],
   "review": null,
+  "fixes_module": null,
+  "split_from": null,
+  "aliases": [],
+  "product_acceptance": {
+    "product_status": "pending",
+    "user_status": "pending",
+    "decision_id": null,
+    "ref": null,
+    "note": "",
+    "accepted_at": null,
+    "updated_at": null
+  },
   "wall_clock_limit_hours": 8,
   "started_at": null,
   "finished_at": null,

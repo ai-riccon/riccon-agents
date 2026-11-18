@@ -553,6 +553,31 @@ export function checkRelease(projectDir, options = {}) {
     } else {
       add("modules", "pass", `all ${modules.length} module(s) are done`);
     }
+    for (const module of modules) {
+      const acceptance = module.product_acceptance;
+      if (!acceptance) {
+        add(
+          `product_acceptance:${module.id}`,
+          "warn",
+          `module ${module.id} has no product acceptance record (legacy); record Product and user acceptance before release`,
+        );
+      } else if (
+        acceptance.product_status !== "pass" ||
+        acceptance.user_status !== "accepted"
+      ) {
+        add(
+          `product_acceptance:${module.id}`,
+          "fail",
+          `module ${module.id} acceptance is product=${acceptance.product_status}, user=${acceptance.user_status}; release requires product=pass, user=accepted`,
+        );
+      } else {
+        add(
+          `product_acceptance:${module.id}`,
+          "pass",
+          `module ${module.id} has Product and user acceptance`,
+        );
+      }
+    }
   }
 
   if (requireScope) {

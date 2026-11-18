@@ -80,9 +80,9 @@ export function taskSizeWarnings(task) {
       `write_scope has ${task.write_scope.length} entries; split the task before starting`,
     );
   }
-  if ((task.acceptance || []).length > 6) {
+  if ((task.acceptance || []).length >= 6) {
     warnings.push(
-      `acceptance has ${task.acceptance.length} items; split the task before starting`,
+      `acceptance has ${task.acceptance.length} items; split by independently verifiable outcomes before starting`,
     );
   }
   return warnings;
@@ -90,13 +90,14 @@ export function taskSizeWarnings(task) {
 
 /**
  * @param {string} projectDir
- * @param {{ id?: string, title: string, goal?: string, kind?: string, dependsOn?: string[], acceptance?: string[], wallClockLimitHours?: number }} input
+ * @param {{ id?: string, title: string, goal?: string, kind?: string, dependsOn?: string[], acceptance?: string[], wallClockLimitHours?: number, fixesModule?: string, splitFrom?: string, aliases?: string[] }} input
  * @returns {any}
  */
 export function createModule(projectDir, input) {
   const { state, paths } = loadProject(projectDir);
   const modules = readModules(projectDir);
   const id = input.id || nextModuleId(modules);
+  const kind = input.kind || 'feature';
 
   if (!/^M[0-9]{2,}$/.test(id)) {
     fail(`invalid module id "${id}"; expected M01, M02, ...`, {
@@ -107,7 +108,7 @@ export function createModule(projectDir, input) {
     fail(`module ${id} already exists`, { code: 'ERR_MODULE_EXISTS' });
   }
 
-  const dependsOn = input.dependsOn || [];
+  const dependsOn = [...(input.dependsOn || [])];
   for (const dependency of dependsOn) {
     if (!modules.some((module) => module.id === dependency)) {
       fail(`module ${id} depends on unknown module ${dependency}`, {
@@ -116,19 +117,67 @@ export function createModule(projectDir, input) {
     }
   }
 
+  const fixesModule = input.fixesModule || null;
+  if (fixesModule) {
+    if (!modules.some((module) => module.id === fixesModule)) {
+      fail(`module ${id} fixes unknown module ${fixesModule}`, {
+        code: 'ERR_MODULE_DEPENDENCY',
+      });
+    }
+    if (kind !== 'fix') {
+      fail(`module ${id} declares fixes_module ${fixesModule}; kind must be fix`, {
+        code: 'ERR_MODULE_RELATION',
+      });
+    }
+    if (!dependsOn.includes(fixesModule)) dependsOn.push(fixesModule);
+  }
+
+  const splitFrom = input.splitFrom || null;
+  if (splitFrom) {
+    if (!modules.some((module) => module.id === splitFrom)) {
+      fail(`module ${id} splits from unknown module ${splitFrom}`, {
+        code: 'ERR_MODULE_DEPENDENCY',
+      });
+    }
+    if (splitFrom === id) {
+      fail(`module ${id} cannot split from itself`, {
+        code: 'ERR_MODULE_RELATION',
+      });
+    }
+    if (!dependsOn.includes(splitFrom)) dependsOn.push(splitFrom);
+  }
+
+  const aliases = [
+    ...new Set(
+      (input.aliases || []).map((item) => String(item).trim()).filter(Boolean),
+    ),
+  ];
+
   const createdAt = nowIso();
   const module = {
     schema_version: 1,
     id,
     title: input.title,
     goal: input.goal || '',
-    kind: input.kind || 'feature',
+    kind,
     status: 'planned',
     blocker: null,
     depends_on: dependsOn,
     acceptance: input.acceptance || [],
     tasks: [],
     review: null,
+    fixes_module: fixesModule,
+    split_from: splitFrom,
+    aliases,
+    product_acceptance: {
+      product_status: 'pending',
+      user_status: 'pending',
+      decision_id: null,
+      ref: null,
+      note: '',
+      accepted_at: null,
+      updated_at: null,
+    },
     wall_clock_limit_hours: input.wallClockLimitHours || 8,
     started_at: null,
     finished_at: null,
@@ -152,13 +201,122 @@ export function createModule(projectDir, input) {
 /**
  * @param {string} projectDir
  * @param {string} moduleId
- * @param {{ status?: string, blocker?: string | null, clearBlocker?: boolean, wallClockLimitHours?: number, review?: string }} input
+ * @param {{ status?: string, blocker?: string | null, clearBlocker?: boolean, wallClockLimitHours?: number, review?: string, fixesModule?: string | null, splitFrom?: string | null, aliases?: string[], force?: boolean, productAcceptance?: { productStatus?: string, userStatus?: string, decisionId?: string | null, ref?: string | null, note?: string } }} input
  * @returns {any}
  */
 export function updateModule(projectDir, moduleId, input) {
   const { state, paths } = loadProject(projectDir);
   const modules = readModules(projectDir);
   const module = getModuleOrFail(moduleId, modules);
+
+  if (input.fixesModule !== undefined) {
+    const fixesModule = input.fixesModule || null;
+    if (fixesModule) {
+      if (!modules.some((item) => item.id === fixesModule)) {
+        fail(`module ${moduleId} fixes unknown module ${fixesModule}`, {
+          code: 'ERR_MODULE_DEPENDENCY',
+        });
+      }
+      if ((module.kind || 'feature') !== 'fix') {
+        fail(`module ${moduleId} declares fixes_module ${fixesModule}; kind must be fix`, {
+          code: 'ERR_MODULE_RELATION',
+        });
+      }
+      if (!(module.depends_on || []).includes(fixesModule)) {
+        module.depends_on = [...(module.depends_on || []), fixesModule];
+      }
+    }
+    module.fixes_module = fixesModule;
+  }
+
+  if (input.splitFrom !== undefined) {
+    const splitFrom = input.splitFrom || null;
+    if (splitFrom) {
+      if (splitFrom === moduleId) {
+        fail(`module ${moduleId} cannot split from itself`, {
+          code: 'ERR_MODULE_RELATION',
+        });
+      }
+      if (!modules.some((item) => item.id === splitFrom)) {
+        fail(`module ${moduleId} splits from unknown module ${splitFrom}`, {
+          code: 'ERR_MODULE_DEPENDENCY',
+        });
+      }
+      if (!(module.depends_on || []).includes(splitFrom)) {
+        module.depends_on = [...(module.depends_on || []), splitFrom];
+      }
+    }
+    module.split_from = splitFrom;
+  }
+
+  if (input.aliases !== undefined) {
+    module.aliases = [
+      ...new Set(
+        (input.aliases || []).map((item) => String(item).trim()).filter(Boolean),
+      ),
+    ];
+  }
+
+  if (input.productAcceptance !== undefined) {
+    const productStatuses = [
+      'not-recorded',
+      'pending',
+      'pass',
+      'changes-requested',
+      'blocked',
+    ];
+    const userStatuses = [
+      'not-recorded',
+      'pending',
+      'accepted',
+      'rejected',
+      'conditional',
+    ];
+    const productStatus = input.productAcceptance.productStatus;
+    const userStatus = input.productAcceptance.userStatus;
+    if (productStatus !== undefined && !productStatuses.includes(productStatus)) {
+      fail(`invalid product acceptance status "${productStatus}"`, {
+        code: 'ERR_PRODUCT_ACCEPTANCE',
+      });
+    }
+    if (userStatus !== undefined && !userStatuses.includes(userStatus)) {
+      fail(`invalid user acceptance status "${userStatus}"`, {
+        code: 'ERR_PRODUCT_ACCEPTANCE',
+      });
+    }
+    const current = module.product_acceptance || {};
+    const nextUserStatus =
+      userStatus !== undefined
+        ? userStatus
+        : current.user_status || 'not-recorded';
+    module.product_acceptance = {
+      ...current,
+      product_status:
+        productStatus !== undefined
+          ? productStatus
+          : current.product_status || 'not-recorded',
+      user_status: nextUserStatus,
+      decision_id:
+        input.productAcceptance.decisionId !== undefined
+          ? input.productAcceptance.decisionId
+          : current.decision_id || null,
+      ref:
+        input.productAcceptance.ref !== undefined
+          ? input.productAcceptance.ref
+          : current.ref || null,
+      note:
+        input.productAcceptance.note !== undefined
+          ? input.productAcceptance.note
+          : current.note || '',
+      accepted_at:
+        userStatus !== undefined
+          ? nextUserStatus === 'accepted'
+            ? current.accepted_at || nowIso()
+            : null
+          : current.accepted_at || null,
+      updated_at: nowIso(),
+    };
+  }
 
   if (input.status && input.status !== module.status) {
     assertTransition('module', module.status, input.status);
@@ -193,6 +351,32 @@ export function updateModule(projectDir, moduleId, input) {
           );
         }
       }
+      const openAcceptance = (module.depends_on || [])
+        .map((dependency) => modules.find((item) => item.id === dependency))
+        .filter(
+          (dependency) =>
+            dependency &&
+            (['pending', 'changes-requested', 'blocked'].includes(
+              dependency.product_acceptance?.product_status,
+            ) ||
+              ['pending', 'rejected', 'conditional'].includes(
+                dependency.product_acceptance?.user_status,
+              )),
+        );
+      const unaccepted = openAcceptance.find(
+        (dependency) =>
+          !(
+            (module.kind || 'feature') === 'fix' &&
+            module.fixes_module === dependency.id
+          ),
+      );
+      if (unaccepted && !input.force) {
+        const acceptance = unaccepted.product_acceptance || {};
+        fail(
+          `module ${moduleId} cannot start; dependency ${unaccepted.id} acceptance is product=${acceptance.product_status || 'unknown'}, user=${acceptance.user_status || 'unknown'}; fix it with kind=fix and fixes_module=${unaccepted.id}, or wait for user acceptance (use --force only to normalize legacy state)`,
+          { code: 'ERR_PRODUCT_ACCEPTANCE' },
+        );
+      }
       if (!module.started_at) module.started_at = nowIso();
       applyModuleToState(state, module);
     }
@@ -203,6 +387,13 @@ export function updateModule(projectDir, moduleId, input) {
         fail(
           `module ${moduleId} cannot be marked done; gate failed: ${gate.errors.join('; ')}`,
           { code: 'ERR_GATE', details: gate },
+        );
+      }
+      const productStatus = module.product_acceptance?.product_status;
+      if (productStatus && !['not-recorded', 'pass'].includes(productStatus)) {
+        fail(
+          `module ${moduleId} cannot be marked done; Product pre-acceptance is ${productStatus}; record product_status=pass before done, then get user acceptance separately`,
+          { code: 'ERR_PRODUCT_ACCEPTANCE' },
         );
       }
       module.status = 'done';
@@ -246,6 +437,12 @@ export function createTask(projectDir, input) {
   const { state, paths } = loadProject(projectDir);
   const modules = readModules(projectDir);
   const module = getModuleOrFail(input.moduleId, modules);
+  if (module.status === 'done') {
+    fail(
+      `module ${module.id} is done; create a fix module or a new task in an active module`,
+      { code: 'ERR_MODULE_DONE' },
+    );
+  }
   const tasks = readTasks(projectDir);
   const id = nextId('TASK', tasks.map((task) => task.id), 4);
 
@@ -392,7 +589,7 @@ export function updateTask(projectDir, taskId, input) {
   const tasks = readTasks(projectDir);
   const task = getTaskOrFail(taskId, tasks);
   const modules = readModules(projectDir);
-  getModuleOrFail(task.module_id, modules);
+  const module = getModuleOrFail(task.module_id, modules);
   const previousOwner = task.owner;
 
   if (input.endCommit) {
@@ -430,6 +627,21 @@ export function updateTask(projectDir, taskId, input) {
     assertTransition('task', task.status, input.status);
 
     if (input.status === 'in_progress') {
+      if (module.status !== 'building') {
+        fail(
+          `task ${taskId} cannot start; module ${module.id} is ${module.status}, expected building`,
+          { code: 'ERR_MODULE_NOT_BUILDING' },
+        );
+      }
+      for (const dependency of module.depends_on || []) {
+        const dep = modules.find((item) => item.id === dependency);
+        if (!dep || dep.status !== 'done') {
+          fail(
+            `task ${taskId} cannot start; module ${module.id} dependency ${dependency} is ${dep?.status || 'missing'}, expected done`,
+            { code: 'ERR_MODULE_LOCKED' },
+          );
+        }
+      }
       const owner = input.owner || task.owner;
       const occupied = state.active_tasks?.[owner];
       if (occupied && occupied !== taskId && !input.force) {

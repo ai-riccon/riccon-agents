@@ -128,7 +128,9 @@ budget:
 - Architect 的架构/ADR 必须经 Lead 完整性、用户不可逆决策、Verifier 可测试性/安全边界、Ops 可运维性检查；未评审的 ADR 保持 `proposed`。
 - Builder 只把任务移到 review，不自己 done；高风险任务（认证、权限、迁移、并发、安全、AI 工具调用）done 前必须有独立 Verifier 评审。
 - 任务级/架构级独立评审写到 `.riccon/reviews/tasks/<task>-review.md`；模块评审写到 `.riccon/reviews/<module>-review.md`。任务评审不参与模块 gate，高风险任务 closeout 必须引用。
-- 模块 gate 通过后，先由 Product 按需求、UX 和范围做预验收；预验收 pass 后才提交用户最终验收，结论记录在 `docs/ACCEPTANCE.md`；未 accepted 不进入下一个用户可见模块。
+- gate 检查通过后、模块标记 done 前，先由 Product 按需求、UX 和范围做预验收；Product pass 后才标记 done，再提交用户最终验收，结论记录在 `docs/ACCEPTANCE.md`。用户未 accepted 前不启动下一个用户可见模块；验收失败用 `kind: fix` + `fixes_module`，或在显式决策后重新打开。
+- 模块过大时在构建前拆分，用 `split_from`/`aliases` 记录关系；模块 ID 仍是 `M` + 数字。任务进入 `in_progress` 前模块必须是 `building`，依赖全部 done；一个任务只承载一个可独立验收的用户可见结果。
+- 模块评审的 AC 对账必须引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据。
 - 测试按两层执行：任务级跑受影响测试；模块 gate 在最终提交上跑一次全量合同 test/coverage/E2E。高风险、跨模块契约和迁移任务在任务完成时跑全量；任务级定向证据不替代模块 review 的全量绑定。
 - 同一份代码的全量验证只跑一次；提交后用 `riccon evidence run` 记录这次运行，不要先跑一遍再取证，也不要为取证新建临时工作树。
 - 长测试设置超时并保留日志；超时是失败，不是通过。

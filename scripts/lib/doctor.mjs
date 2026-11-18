@@ -382,6 +382,17 @@ export function runDoctor(teamRoot) {
     }
   }
 
+  const templateModule = join(teamRoot, 'templates', 'state', 'module.json');
+  if (!exists(templateModule)) {
+    add('template-module', 'fail', 'templates/state/module.json is missing');
+  } else if (!readText(templateModule).includes('product_acceptance')) {
+    add(
+      'template-module-acceptance',
+      'fail',
+      'templates/state/module.json must include product_acceptance',
+    );
+  }
+
   const templateReview = join(teamRoot, 'templates', 'state', 'review.md');
   if (!exists(templateReview)) {
     add('template-review', 'fail', 'templates/state/review.md is missing');

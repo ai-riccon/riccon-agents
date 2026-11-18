@@ -17,6 +17,7 @@ quality_gate:
   gate_module_id: M01
   gate_checked_at: "2026-01-01T00:00:00.000Z"
   release_gate_status: none
+  product_acceptance_open: []
   active_tasks: 0
   checked_at: "2026-01-01T00:00:00.000Z"
 created_at: "2026-01-01T00:00:00.000Z"

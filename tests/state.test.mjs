@@ -37,6 +37,16 @@ function addModuleAndTask(dir) {
     dir,
   ]);
   assert.equal(task.code, 0, task.stderr);
+  const started = run([
+    'module',
+    'update',
+    'M01',
+    '--status',
+    'building',
+    '--project',
+    dir,
+  ]);
+  assert.equal(started.code, 0, started.stderr);
 }
 
 test('a fresh project validates cleanly', (t) => {
@@ -99,6 +109,26 @@ test('a top-level task review points to reviews/tasks', (t) => {
   const result = runJson(['state', 'validate', '--project', dir]);
   assert.equal(result.code, 1);
   assert.match(result.json.errors.join(' '), /reviews\/tasks\//);
+});
+
+test('state validation catches done tasks in a planned module', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+
+  const moduleFile = join(dir, '.riccon', 'modules', 'M01.json');
+  const module = readJson(moduleFile);
+  module.status = 'planned';
+  writeJson(moduleFile, module);
+  const taskFile = join(dir, '.riccon', 'tasks', 'TASK-0001.json');
+  const task = readJson(taskFile);
+  task.status = 'done';
+  writeJson(taskFile, task);
+
+  const result = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(result.code, 0);
+  assert.match(result.json.warnings.join(' '), /is planned but has started\/done tasks/);
 });
 
 test('state validation catches a dangling current_module', (t) => {

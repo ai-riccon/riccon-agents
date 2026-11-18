@@ -68,7 +68,7 @@ intake → contract → MVC → build → independent verify → gate → review
       → user veto window → next module → ... → release → operate/retro
 ```
 
-模块是带用户可见结果的纵向切片。依赖完成且前一个 gate 通过后，模块才能开始。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。架构/ADR 同时完成 Lead、用户（不可逆项）、Verifier、Ops 的评审，未评审 ADR 保持 `proposed`。Builder 只把任务移到 review，高风险任务 done 前必须有独立 Verifier 评审。模块 gate 通过后，先由 Product 按需求/UX/范围做预验收，再由用户通过 `docs/ACCEPTANCE.md` 做最终产品验收；Product 预验收未 pass 不提交用户，用户未 accepted 不进入下一个用户可见模块。测试按两层执行：任务级跑受影响测试，模块 gate 在最终提交上跑一次全量合同测试和覆盖率；同一份代码不重复全量，最终命令只取证一次。
+模块是带用户可见结果的纵向切片。依赖完成且前一个 gate 通过后，模块才能开始。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。架构/ADR 同时完成 Lead、用户（不可逆项）、Verifier、Ops 的评审，未评审 ADR 保持 `proposed`。Builder 只把任务移到 review，高风险任务 done 前必须有独立 Verifier 评审。gate 检查通过后、标记模块 done 前，Product 按需求/UX/范围做预验收；Product `pass` 后才标记 done，再由用户做最终验收。用户未 `accepted` 前不启动下一个用户可见模块；验收失败的修复用 `kind: fix` + `fixes_module`，或显式决策后重开。模块过大时在构建前拆分，并用 `split_from`/`aliases` 记录关系；一个任务只承载一个可独立验收的用户可见结果。测试按两层执行：任务级跑受影响测试，模块 gate 在最终提交上跑一次全量合同测试和覆盖率；同一份代码不重复全量，最终命令只取证一次。
 
 ## 6. 自治刹车
 
@@ -82,7 +82,7 @@ intake → contract → MVC → build → independent verify → gate → review
 
 DoD 随轨道变化。T3/MVC 需要验收、构建、测试、关键 E2E、可访问性、安全基线、性能预算、迁移回滚、文档、证据和独立签字。T4 增加威胁建模、负载测试、容灾和明确发布批准。
 
-执行零个测试的测试命令是失败。retry 不能掩盖 flake。verifier 写 review；作者不写。
+执行零个测试的测试命令是失败。retry 不能掩盖 flake。verifier 写 review；作者不写。AC 对账必须引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据。
 
 ## 8. 记忆
 

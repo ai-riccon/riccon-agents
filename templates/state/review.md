@@ -22,6 +22,7 @@ dod:
 # strict 项目必须填写；每个 true 的 DoD（review/evidence 除外）至少绑定一条
 # 真实、通过、已列入 reviewed_evidence 的 EV。模块 review 的 tests/coverage
 # 必须绑定覆盖合同 commands 的全量 EV；任务级定向 EV 不能替代模块全量绑定。
+# acceptance 必须按 AC 原文绑定用户可见证据；UI/文案/入口 AC 不能只用 API 证据。
 dod_evidence:
   acceptance: [EV-0001]
   build: [EV-0002]

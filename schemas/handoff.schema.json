@@ -35,6 +35,10 @@
         "gate_module_id": { "type": ["string", "null"] },
         "gate_checked_at": { "type": ["string", "null"] },
         "release_gate_status": { "enum": ["none", "pass", "fail"] },
+        "product_acceptance_open": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        },
         "active_tasks": { "type": "integer", "minimum": 0 },
         "checked_at": { "type": "string" }
       }

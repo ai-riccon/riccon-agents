@@ -142,6 +142,16 @@ export function addModuleAndTask(
     dir,
   ]);
   if (task.code !== 0) throw new Error(task.stderr || task.stdout);
+  const started = run([
+    'module',
+    'update',
+    module.json.module.id,
+    '--status',
+    'building',
+    '--project',
+    dir,
+  ]);
+  if (started.code !== 0) throw new Error(started.stderr || started.stdout);
   return { module: module.json.module, task: task.json.task };
 }
 

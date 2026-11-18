@@ -39,6 +39,7 @@ export function createHandoff(input) {
   const errors = [];
 
   const tasks = readTasks(input.projectDir);
+  const modules = readModules(input.projectDir);
   const activeTasks = tasks.filter((task) =>
     ['in_progress', 'review'].includes(task.status),
   );
@@ -68,7 +69,6 @@ export function createHandoff(input) {
       `handoff in phase ${state.phase} requires a passing module gate, got ${state.gate?.status || 'none'}`,
     );
   } else if (state.gate?.status === 'pass') {
-    const modules = readModules(input.projectDir);
     const current = modules.find((module) => module.id === state.current_module);
     const lastDone = modules
       .filter((module) => module.status === 'done')
@@ -149,6 +149,26 @@ export function createHandoff(input) {
     });
   }
 
+  const openAcceptance = modules
+    .filter((module) => {
+      if (module.status === 'planned') return false;
+      const acceptance = module.product_acceptance;
+      if (!acceptance) return false;
+      return (
+        ['pending', 'changes-requested', 'blocked'].includes(
+          acceptance.product_status,
+        ) ||
+        ['pending', 'rejected', 'conditional'].includes(acceptance.user_status)
+      );
+    })
+    .map((module) => ({
+      id: module.id,
+      product_status: module.product_acceptance.product_status,
+      user_status: module.product_acceptance.user_status,
+      fixes: modules
+        .filter((item) => item.fixes_module === module.id)
+        .map((item) => ({ id: item.id, status: item.status })),
+    }));
   const data = {
     handoff_id: handoffId,
     session: input.session || null,
@@ -163,6 +183,7 @@ export function createHandoff(input) {
       gate_module_id: state.gate?.module_id || null,
       gate_checked_at: state.gate?.checked_at || null,
       release_gate_status: state.release_gate?.status || 'none',
+      product_acceptance_open: openAcceptance,
       active_tasks: 0,
       checked_at: createdAt,
     },
@@ -194,6 +215,20 @@ export function createHandoff(input) {
     '- 触发原因：模块 gate / phase 切换 / 上下文预算 / 会话结束。',
     `- 质量门槛：已检查 gate=${data.quality_gate.gate_status}、release_gate=${data.quality_gate.release_gate_status}、active tasks=0、done task 证据完整、first_read 路径存在。`,
     '- 未验证项：本 handoff 不替代 gate、review 或用户批准；新会话必须重新读取状态和证据。',
+    `- 产品验收：${
+      openAcceptance.length
+        ? openAcceptance
+            .map(
+              (item) =>
+                `${item.id} product=${item.product_status} user=${item.user_status}${
+                  item.fixes.length
+                    ? ` (fix ${item.fixes.map((fix) => `${fix.id} ${fix.status}`).join(', ')})`
+                    : ''
+                }`,
+            )
+            .join('; ')
+        : '无未完成项'
+    }`,
     '- 新会话：运行 `/riccon-resume`，从 `.riccon/` 和本文件恢复；不要重读旧聊天。',
     '',
     '## First read',
