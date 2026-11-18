@@ -1,5 +1,17 @@
 # 产品
 
+## 评审状态
+
+| 检查 | 状态 | 记录 |
+|---|---|---|
+| Product 草案 | draft | 本文件 |
+| Lead 完整性/合同一致性 | pending | Lead 评审意见 |
+| 用户范围批准 | pending | 决策 ID |
+| Architect 可行性 | pending | ADR / 设计说明 |
+| Verifier AC 可验证性 | pending | 预检查或模块 review |
+
+状态值：`draft`、`pending`、`pass`、`changes-requested`。用户未批准前，不进入模块实现。
+
 ## 目标
 
 用一段话说明这个产品解决什么用户问题。

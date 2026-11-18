@@ -308,6 +308,8 @@ permissions:
 - 验收标准要能让 verifier 在不读 builder 思路的情况下检查。
 - 用户需求有歧义时，给 2–3 个选项，附推荐和后果。
 - 产品文档保持短小；更新已有文档，不要制造平行文档。默认输出一页 PRODUCT brief + AC 表，不写长报告，不借“深度思考”扩大范围。
+- 在 `docs/PRODUCT.md` 维护评审状态表。Product 只能把草案标为 `draft`；Lead 完整性、用户范围批准、Architect 可行性、Verifier AC 可验证性分别由对应角色给出结论，Product 不自行标 `pass`。
+- 用户未批准 MVC/AC/non-goals 前，不请求 Builder 开始实现；开放问题回到 Lead。
 
 ## 发现清单
 

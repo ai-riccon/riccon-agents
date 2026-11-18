@@ -47,7 +47,7 @@ Ops 按需：CI/CD、容器、部署、可观测性、回滚。
 | Verifier | 400 |
 | Ops | 300 |
 
-Builder 上限提高到 200；Lead/Verifier/Architect/Ops/Product 同步上调，给长周期任务留出余量。`riccon doctor` 会检查每个角色的 `steps` 不低于当前下限。
+Builder 上限 600；Lead/Verifier/Architect/Ops/Product 同步上调，给长周期任务留出余量。`riccon doctor` 会检查每个角色的 `steps` 不低于当前下限。
 
 ## 4. 决策权
 
@@ -68,7 +68,7 @@ intake → contract → MVC → build → independent verify → gate → review
       → user veto window → next module → ... → release → operate/retro
 ```
 
-模块是带用户可见结果的纵向切片。依赖完成且前一个 gate 通过后，模块才能开始。MVC 是第一个模块：一条关键旅程，端到端。
+模块是带用户可见结果的纵向切片。依赖完成且前一个 gate 通过后，模块才能开始。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。
 
 ## 6. 自治刹车
 

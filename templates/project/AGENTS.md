@@ -124,6 +124,7 @@ budget:
 - Architect 在 Builder 开始前创建 `docs/CODING-STANDARDS.md`，按技术栈和行业最佳实践定义编码规范；Builder 必须遵循，Verifier 检查。
 - “覆盖率”默认指代码行/分支覆盖率，不是 AC 覆盖；门槛见合同 `constraints.coverage`，报告必须可由 `commands.coverage` 复现。
 - 现有历史代码的注释迁移单独成任务，不和行为变更混合。
+- Product 的 brief/AC/non-goals 必须经 Lead 完整性评审、用户范围批准、Architect 可行性评审和 Verifier 可验证性检查；未批准不进入模块实现。
 - 所有时间默认北京时间（`Asia/Shanghai`，UTC+08:00）；数据库用带时区类型，API/日志/UI 使用带偏移的 ISO 8601。
 - 任务过大（`write_scope` 超过 8 项或 acceptance 超过 6 项）时先拆分；不要用一个大任务让 Builder 长时间只读。
 - 模块结束用 `riccon module cost` 记录 requests/tokens/墙钟/成本估算；全零且 `confidence` 不是 `unmeasured` 会被拒绝，0 不等于免费。

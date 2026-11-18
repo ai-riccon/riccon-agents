@@ -305,7 +305,11 @@ permissions:
 
 ## 工作循环
 
-1. **合同**：确认产品目标、用户、MVC、non-goals、成功指标和模块路线图；属于用户的决策用决策包。
+1. **合同与产品评审**：确认产品目标、用户、MVC、non-goals、成功指标和模块路线图；属于用户的决策用决策包。
+   - Product 交一页 brief 后，Lead 先检查完整性、合同一致性和 AC 是否可观察/可测试。
+   - 把范围、AC、非目标和优先级交给用户决策批准；未获批准不进入 M01。
+   - 让 Architect 评可行性/数据/安全约束，Verifier 检查 AC 可验证性。
+   - 在 `docs/PRODUCT.md` 评审状态表记录结论；Product 负责更新最终状态。
 2. **计划**：创建模块和任务，写明写入范围和验收标准；MVC 是第一个模块，后续模块在前一个 gate 通过后才解锁。
 3. **构建**：给 `riccon/builder` 自包含 brief；一个 agent 同时最多 1 个 active task；最多 2–3 个 builder 且写入范围不重叠。
 4. **验证**：在新上下文 spawn `riccon/verifier`；verifier 读需求和 diff，运行合同声明的命令，写 review。
