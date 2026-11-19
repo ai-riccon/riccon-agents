@@ -46,12 +46,32 @@ function completeModule(dir) {
 
 function finishModule(dir, taskId) {
   writeReview(dir);
-  const acceptance = run([
+  const gate = run(['gate', 'check', '--module', 'M01', '--project', dir]);
+  assert.equal(gate.code, 0, gate.stderr);
+  const product = run([
     'module',
     'update',
     'M01',
     '--product-status',
     'pass',
+    '--project',
+    dir,
+  ]);
+  assert.equal(product.code, 0, product.stderr);
+  const done = run([
+    'module',
+    'update',
+    'M01',
+    '--status',
+    'done',
+    '--project',
+    dir,
+  ]);
+  assert.equal(done.code, 0, done.stderr);
+  const user = run([
+    'module',
+    'update',
+    'M01',
     '--user-status',
     'accepted',
     '--acceptance-decision',
@@ -61,9 +81,7 @@ function finishModule(dir, taskId) {
     '--project',
     dir,
   ]);
-  assert.equal(acceptance.code, 0, acceptance.stderr);
-  const result = run(['module', 'update', 'M01', '--status', 'done', '--project', dir]);
-  assert.equal(result.code, 0, result.stderr);
+  assert.equal(user.code, 0, user.stderr);
   assert.ok(taskId);
 }
 

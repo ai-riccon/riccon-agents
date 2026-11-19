@@ -4,6 +4,7 @@ import { stringifyFrontmatter } from './yamlx.mjs';
 import { assertSchema } from './schema.mjs';
 import { nowIso } from './time.mjs';
 import { fail } from './errors.mjs';
+import { isAcceptanceOpen } from './acceptance.mjs';
 import {
   loadProject,
   nextId,
@@ -125,6 +126,9 @@ export function createHandoff(input) {
   const defaultFirstRead = [
     '.riccon/state.json',
     'AGENTS.md#project-contract',
+    ...(exists(join(input.projectDir, 'docs', 'COLLABORATION.md'))
+      ? ['docs/COLLABORATION.md']
+      : []),
     `.riccon/handoffs/handoff-${suffix}.md`,
   ];
   const requestedFirstRead = (input.firstRead || []).filter(
@@ -150,17 +154,7 @@ export function createHandoff(input) {
   }
 
   const openAcceptance = modules
-    .filter((module) => {
-      if (module.status === 'planned') return false;
-      const acceptance = module.product_acceptance;
-      if (!acceptance) return false;
-      return (
-        ['pending', 'changes-requested', 'blocked'].includes(
-          acceptance.product_status,
-        ) ||
-        ['pending', 'rejected', 'conditional'].includes(acceptance.user_status)
-      );
-    })
+    .filter((module) => module.status !== 'planned' && isAcceptanceOpen(module))
     .map((module) => ({
       id: module.id,
       product_status: module.product_acceptance.product_status,

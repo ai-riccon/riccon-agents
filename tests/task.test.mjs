@@ -759,6 +759,65 @@ test('task new warns at six acceptance items', (t) => {
   assert.match(task.json.warnings[0], /independently verifiable outcomes/);
 });
 
+test('Product pass and user acceptance follow the module lifecycle', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  assert.equal(
+    run(['module', 'new', '--title', 'MVC', '--kind', 'mvc', '--project', dir]).code,
+    0,
+  );
+  assert.equal(
+    run(['module', 'update', 'M01', '--status', 'building', '--project', dir]).code,
+    0,
+  );
+
+  const earlyProduct = run([
+    'module',
+    'update',
+    'M01',
+    '--product-status',
+    'pass',
+    '--project',
+    dir,
+  ]);
+  assert.equal(earlyProduct.code, 1);
+  assert.match(earlyProduct.stderr, /review_pending/);
+
+  const earlyUser = run([
+    'module',
+    'update',
+    'M01',
+    '--user-status',
+    'accepted',
+    '--project',
+    dir,
+  ]);
+  assert.equal(earlyUser.code, 1);
+  assert.match(earlyUser.stderr, /before done/);
+
+  setModuleStatus(dir, 'M01', 'review_pending');
+  assert.equal(
+    run([
+      'module',
+      'update',
+      'M01',
+      '--product-status',
+      'pass',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
+  assert.equal(
+    run(['module', 'update', 'M01', '--status', 'building', '--project', dir]).code,
+    0,
+  );
+  const reworked = runJson(['module', 'show', 'M01', '--project', dir, '--json']);
+  assert.equal(reworked.json.product_acceptance.product_status, 'pending');
+  assert.equal(reworked.json.product_acceptance.user_status, 'pending');
+});
+
 test('module split records relation and alias', (t) => {
   const dir = tempDir();
   t.after(() => cleanup(dir));

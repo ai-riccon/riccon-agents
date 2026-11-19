@@ -4,17 +4,9 @@
 
 ## 默认映射
 
-写入 `.opencode/agents/riccon/*.md` 的 frontmatter；`#variant` 是思考强度。
+模型和步数的唯一事实源是 `templates/agents/models.yml`。`npm run sync:agents` 会写入 `.opencode/agents/riccon/*.md` 的 frontmatter；`riccon doctor` 会校验 agent 文件与模板一致。`#variant` 是思考强度。
 
-| 角色      | 默认模型                            | 思考强度 | 说明                     |
-| --------- | ----------------------------------- | -------- | ------------------------ |
-| Lead      | `opencode-go/deepseek-v4.1-flash`   | `max`    | 长会话、拆模块、汇总评审 |
-| Product   | `opencode-go/deepseek-v4.1-flash`   | `max`    | 需求拆解、验收标准、范围边界 |
-| Architect | `opencode-go/deepseek-v4.1-flash`   | `max`    | 架构、契约、ADR          |
-| Builder   | `opencode-go/deepseek-v4.1-flash`   | `max`    | 代码任务 token 量最大    |
-| Verifier  | `opencode-go/deepseek-v4.1-flash`   | `max`    | 独立验证、代码审查       |
-| Ops       | `opencode-go/deepseek-v4.1-flash`   | `high`   | CI/CD、容器、脚本        |
-| 扫描/摘要 | `opencode/deepseek-v4.1-flash-free` | `high`   | 低风险分类和摘要         |
+不要在文档、agent prompt 或项目合同里再维护第二份模型/步数表。
 
 ## 替换原则
 
@@ -33,9 +25,7 @@ model: opencode-go/deepseek-v4.1-flash#max
 
 覆盖方式：
 
-- 全局/项目 `opencode.json(c)` 的 `agents.<id>.model`；
-- 或直接改 agent Markdown 的 `model`。
+- 团队默认：只改 `templates/agents/models.yml`，然后运行 `npm run sync:agents`；
+- 项目局部覆盖：在项目 `opencode.json(c)` 的 `agents.<id>.model` 中设置，不要手改已同步的 agent Markdown。
 
 OpenCode 会话会保存自己选中的模型；切换 primary agent 不会自动改变已有会话的模型。新会话才使用 agent 默认值。
-
-`templates/agents/models.yml` 是同一映射的部署侧模板。

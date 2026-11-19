@@ -61,6 +61,7 @@ import { checkSandbox, renderSandboxReport } from './sandbox.mjs';
 import { createHandoff, listHandoffs, showHandoff } from './handoff.mjs';
 import { getStatus, renderStatus } from './status.mjs';
 import { runDoctor } from './doctor.mjs';
+import { upgradeProject } from './upgrade.mjs';
 import { adoptProject } from './adopt.mjs';
 import { TEAM_ROOT, TEMPLATES_DIR } from './paths.mjs';
 import { TEAM_VERSION } from './version.mjs';
@@ -111,6 +112,7 @@ Usage:
               [--risk-tier T1|T2|T3|T4] [--status greenfield|existing]
               [--evidence-binding strict|legacy] [--force] [--project DIR] [--json]
   riccon adopt [--write] [--project DIR] [--json]
+  riccon upgrade [--write] [--adopt-legacy] [--project DIR] [--json]
   riccon contract validate [--strict] [--project DIR] [--json]
   riccon contract show [--project DIR] [--json]
   riccon contract sync [--project DIR] [--json]
@@ -283,6 +285,7 @@ function cmdInit(args) {
   for (const [source, destination] of [
     ['project/docs/PRODUCT.md', 'docs/PRODUCT.md'],
     ['project/docs/ARCHITECTURE.md', 'docs/ARCHITECTURE.md'],
+    ['project/docs/COLLABORATION.md', 'docs/COLLABORATION.md'],
     ['project/docs/ACCEPTANCE.md', 'docs/ACCEPTANCE.md'],
     ['project/docs/RUNBOOK.md', 'docs/RUNBOOK.md'],
     ['project/docs/SANDBOX.md', 'docs/SANDBOX.md'],
@@ -408,6 +411,48 @@ function cmdAdopt(args) {
     }
   }
   return 0;
+}
+
+/**
+ * 同步团队管理的 AGENTS 区块和模板文档；默认 dry-run。
+ *
+ * @param {string[]} args
+ * @returns {number}
+ */
+function cmdUpgrade(args) {
+  const { values } = parse(args, {
+    write: { type: 'boolean', default: false },
+    'adopt-legacy': { type: 'boolean', default: false },
+  });
+  const projectDir = resolve(values.project);
+  const result = upgradeProject(projectDir, {
+    write: values.write,
+    adoptLegacy: values['adopt-legacy'],
+  });
+  printJson(values.json, result);
+  if (!values.json) {
+    if (!result.ok) {
+      console.log(`upgrade ${result.mode}: ${result.message}`);
+      console.log(
+        'next: review templates/project/AGENTS.md and add the managed team block manually, or rerun with --adopt-legacy after reviewing the diff.',
+      );
+      return 1;
+    }
+    console.log(
+      `upgrade ${result.mode}${result.dry_run ? ' (dry-run)' : ''} · team ${result.version.from || 'unknown'} → ${result.version.to}`,
+    );
+    for (const doc of result.docs) {
+      console.log(`  ${doc.action} ${doc.path}`);
+    }
+    if (result.dry_run) {
+      console.log('next: review the diff, then rerun with --write.');
+    } else {
+      console.log(
+        'next: review AGENTS.md and docs/COLLABORATION.md, then run `riccon contract validate` and `riccon state validate`.',
+      );
+    }
+  }
+  return result.ok ? 0 : 1;
 }
 
 function cmdContract(args) {
@@ -598,6 +643,45 @@ function cmdState(args) {
           `module ${module.id} is done but has unfinished tasks: ${unfinishedTasks
             .map((task) => `${task.id}=${task.status}`)
             .join(', ')}`,
+        );
+      }
+    }
+    const acceptance = module.product_acceptance;
+    if (acceptance) {
+      if (
+        acceptance.product_status === 'pass' &&
+        !['review_pending', 'done'].includes(module.status)
+      ) {
+        warnings.push(
+          `module ${module.id} has Product pass while ${module.status}; Product pre-acceptance must follow a passing gate and precede done`,
+        );
+      }
+      if (
+        ['accepted', 'rejected', 'conditional'].includes(
+          acceptance.user_status,
+        ) &&
+        module.status !== 'done'
+      ) {
+        warnings.push(
+          `module ${module.id} has user acceptance ${acceptance.user_status} before done; legacy state must be reviewed`,
+        );
+      }
+      if (
+        acceptance.user_status === 'accepted' &&
+        acceptance.product_status !== 'pass'
+      ) {
+        warnings.push(
+          `module ${module.id} has user accepted without Product pass; record the Product re-review before user acceptance`,
+        );
+      }
+      if (
+        acceptance.user_status === 'accepted' &&
+        acceptance.accepted_at &&
+        module.finished_at &&
+        Date.parse(acceptance.accepted_at) < Date.parse(module.finished_at)
+      ) {
+        warnings.push(
+          `module ${module.id} user acceptance was recorded before module finish; verify the timeline`,
         );
       }
     }
@@ -1422,6 +1506,8 @@ export async function main(argv) {
         return cmdInit(rest);
       case 'adopt':
         return cmdAdopt(rest);
+      case 'upgrade':
+        return cmdUpgrade(rest);
       case 'contract':
         return cmdContract(rest);
       case 'state':

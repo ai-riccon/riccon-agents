@@ -311,7 +311,7 @@ permissions:
    - 让 Architect 评可行性/数据/安全约束，Verifier 检查 AC 可验证性。
    - 在 `docs/PRODUCT.md` 评审状态表记录结论；Product 负责更新最终状态。
    - 架构评审：Architect 在 `docs/ARCHITECTURE.md` 和 ADR 记录草案；Lead 检查合同/范围，用户批准不可逆/高成本项，Verifier 检查可测试性/安全边界，Ops 检查运维/回滚；结论写入评审状态表。
-2. **计划**：创建模块和任务，写明写入范围和验收标准；MVC 是第一个模块，后续模块在前一个 gate 通过后才解锁。给任务标注风险等级：低风险由 Lead 检查 diff/test/evidence 后 done；高风险（认证、权限、数据迁移、并发、安全、AI 工具调用）在 done 前必须有独立 Verifier 评审。任务验收默认写“受影响测试通过”，不要默认写全量测试；全量合同 test/coverage 留给高风险、跨模块契约/迁移任务或模块收尾任务。一个任务只承载一个可独立验收的用户可见结果；任务进入 in_progress 前模块必须是 building 且依赖全部 done。模块拆分用 `split_from`/`aliases` 记录，模块验收失败用 `kind: fix` + `fixes_module` 记录；不要只靠标题或 depends_on。高风险任务的独立评审写到 `.riccon/reviews/tasks/<task>-review.md`，由 Lead 在 closeout 核对；模块评审仍在 `.riccon/reviews/<module>-review.md`。
+2. **计划**：创建模块和任务，写明写入范围和验收标准；MVC 是第一个模块，后续用户可见模块在前一个模块完成 Product/用户验收后才解锁；修复模块用 `fixes_module` 例外。给任务标注风险等级：低风险由 Lead 检查 diff/test/evidence 后 done；高风险（认证、权限、数据迁移、并发、安全、AI 工具调用）在 done 前必须有独立 Verifier 评审。任务验收默认写“受影响测试通过”，不要默认写全量测试；全量合同 test/coverage 留给高风险、跨模块契约/迁移任务或模块收尾任务。一个任务只承载一个可独立验收的用户可见结果；任务进入 in_progress 前模块必须是 building 且依赖全部 done。模块拆分用 `split_from`/`aliases` 记录，模块验收失败用 `kind: fix` + `fixes_module` 记录；不要只靠标题或 depends_on。高风险任务的独立评审写到 `.riccon/reviews/tasks/<task>-review.md`，由 Lead 在 closeout 核对；模块评审仍在 `.riccon/reviews/<module>-review.md`。
 3. **构建**：给 `riccon/builder` 自包含 brief；一个 agent 同时最多 1 个 active task；最多 2–3 个 builder 且写入范围不重叠。Builder 只把任务移到 review，不自己 done。
 4. **验证**：在新上下文 spawn `riccon/verifier`；任务级先审计最新证据并复验受影响行为，模块 gate 前再对最终提交做一次全量合同验证。不要让每个任务重复全量。
 5. **门禁**：运行 `gate check`；失败就退回，不降低门禁标准。全量 test/coverage/E2E 在最终提交上跑一次并绑定 EV；任务级定向证据不能替代模块 review 的全量绑定。

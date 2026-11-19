@@ -38,16 +38,7 @@ Ops 按需：CI/CD、容器、部署、可观测性、回滚。
 
 ### 步数上限
 
-| 角色 | steps |
-|---|---|
-| Lead | 440 |
-| Product | 240 |
-| Architect | 400 |
-| Builder | 600 |
-| Verifier | 400 |
-| Ops | 300 |
-
-Builder 上限 600；Lead/Verifier/Architect/Ops/Product 同步上调，给长周期任务留出余量。`riccon doctor` 会检查每个角色的 `steps` 不低于当前下限。
+步数和模型映射统一写在 `templates/agents/models.yml`，由 `npm run sync:agents` 同步到 agent frontmatter，`riccon doctor` 校验一致性。本文不再维护第二份数值表，避免文档与 agent 定义漂移。
 
 ## 4. 决策权
 
@@ -68,7 +59,7 @@ intake → contract → MVC → build → independent verify → gate → review
       → user veto window → next module → ... → release → operate/retro
 ```
 
-模块是带用户可见结果的纵向切片。依赖完成且前一个 gate 通过后，模块才能开始。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。架构/ADR 同时完成 Lead、用户（不可逆项）、Verifier、Ops 的评审，未评审 ADR 保持 `proposed`。Builder 只把任务移到 review，高风险任务 done 前必须有独立 Verifier 评审。gate 检查通过后、标记模块 done 前，Product 按需求/UX/范围做预验收；Product `pass` 后才标记 done，再由用户做最终验收。用户未 `accepted` 前不启动下一个用户可见模块；验收失败的修复用 `kind: fix` + `fixes_module`，或显式决策后重开。模块过大时在构建前拆分，并用 `split_from`/`aliases` 记录关系；一个任务只承载一个可独立验收的用户可见结果。测试按两层执行：任务级跑受影响测试，模块 gate 在最终提交上跑一次全量合同测试和覆盖率；同一份代码不重复全量，最终命令只取证一次。
+模块是带用户可见结果的纵向切片。依赖完成，且前一个用户可见模块完成 Product/用户验收后，下一个用户可见模块才能开始；修复模块用 `fixes_module` 例外。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。架构/ADR 同时完成 Lead、用户（不可逆项）、Verifier、Ops 的评审，未评审 ADR 保持 `proposed`。Builder 只把任务移到 review，高风险任务 done 前必须有独立 Verifier 评审。gate 检查通过后、标记模块 done 前，Product 按需求/UX/范围做预验收；Product `pass` 后才标记 done，再由用户做最终验收。用户未 `accepted` 前不启动下一个用户可见模块；验收失败的修复用 `kind: fix` + `fixes_module`，或显式决策后重开。模块过大时在构建前拆分，并用 `split_from`/`aliases` 记录关系；一个任务只承载一个可独立验收的用户可见结果。测试按两层执行：任务级跑受影响测试，模块 gate 在最终提交上跑一次全量合同测试和覆盖率；同一份代码不重复全量，最终命令只取证一次。
 
 ## 6. 自治刹车
 

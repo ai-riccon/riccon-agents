@@ -21,6 +21,7 @@ import {
 } from "./project.mjs";
 import { loadContract } from "./contract.mjs";
 import { checkGate } from "./gate.mjs";
+import { isAccepted } from "./acceptance.mjs";
 
 const T4_ARTIFACTS = ["threat_model", "load_test", "rollback_drill", "runbook"];
 const BASE_ARTIFACTS = ["rollback_drill", "runbook"];
@@ -555,16 +556,17 @@ export function checkRelease(projectDir, options = {}) {
     }
     for (const module of modules) {
       const acceptance = module.product_acceptance;
-      if (!acceptance) {
+      const unrecorded =
+        acceptance &&
+        acceptance.product_status === "not-recorded" &&
+        acceptance.user_status === "not-recorded";
+      if (!acceptance || unrecorded) {
         add(
           `product_acceptance:${module.id}`,
           "warn",
-          `module ${module.id} has no product acceptance record (legacy); record Product and user acceptance before release`,
+          `module ${module.id} has no product acceptance record (legacy/not-recorded); record Product and user acceptance before release`,
         );
-      } else if (
-        acceptance.product_status !== "pass" ||
-        acceptance.user_status !== "accepted"
-      ) {
+      } else if (!isAccepted(module)) {
         add(
           `product_acceptance:${module.id}`,
           "fail",

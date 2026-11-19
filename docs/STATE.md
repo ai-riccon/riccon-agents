@@ -40,7 +40,7 @@
 
 ### 状态
 
-`state.json`：`phase`、`current_module`、`gate`、`health`、`last_handoff`、`next_action`、`active_tasks`、`budget_usage`、时间戳。
+`state.json`：`phase`、`current_module`、`gate`、`release_gate`、`health`、`last_handoff`、`next_action`、`active_tasks`、`budget_usage`、时间戳。
 
 Phases：`init`、`contract`、`discovery`、`mvc`、`modules`、`release`、`operate`、`blocked`。
 
@@ -55,11 +55,13 @@ planned → building → verifying → review_pending → done
    任意活动状态 → blocked → planned/building/verifying
 ```
 
-依赖全部 `done` 后模块才能进入 `building`。`review_pending` 需要至少一个任务且所有任务 `done`；它不是未完成工作的等待区。`done` 表示 gate 通过且 Product 预验收 `pass`；用户最终验收是独立状态（`product_acceptance.user_status`），未 `accepted` 前不启动下一个用户可见模块。验收失败的修复用 `kind: fix` + `fixes_module: Mxx`，或在显式决策后重新打开；不能只靠标题说明关系。`split_from`/`aliases` 记录模块拆分和别名（例如 M10 的 `M03b`），不改变数字 ID 规则。`state validate` 会把 planned/blocked 模块里已有 in_progress/review/done 任务标为 warning（遗留状态，必须先归位再开始新工作），并拒绝 done 模块里仍有未完成任务。`module update --force` 只用于把旧项目的这种遗留状态归位，不得用于绕过新的验收/依赖检查。
+合同里的 `product.module_roadmap` 是范围意图，不是执行状态；模块的当前状态只以 `.riccon/modules/*.json` 为准。`riccon state validate` 会检查执行状态的一致性，不会把 roadmap 的 `status` 当成模块状态。
+
+依赖全部 `done` 后模块才能进入 `building`。`review_pending` 需要至少一个任务且所有任务 `done`；它不是未完成工作的等待区。`done` 表示 gate 通过且 Product 预验收 `pass`；用户最终验收是独立状态（`product_acceptance.user_status`），只能在 done 之后记录，未 `accepted` 前不启动下一个用户可见模块。验收失败的修复用 `kind: fix` + `fixes_module: Mxx`，或在显式决策后重新打开；不能只靠标题说明关系。旧模块没有 `product_acceptance` 或为 `not-recorded` 时，done 按兼容路径放行，但 release 会 warning，必须补验收记录。`split_from`/`aliases` 记录模块拆分和别名（例如 M10 的 `M03b`），不改变数字 ID 规则。`state validate` 会把 planned/blocked 模块里已有 in_progress/review/done 任务标为 warning（遗留状态，必须先归位再开始新工作），并拒绝 done 模块里仍有未完成任务；对提前记录的 Product pass、done 前的用户验收，以及 accepted 早于模块完成的情况也会给 warning。`module update --force` 只用于把旧项目的这种遗留状态归位，不得用于绕过新的验收/依赖检查。
 
 ### 任务
 
-`tasks/TASK-0001.json`：`id`、`module_id`、`title`、`owner`、`status`、`write_scope`、`acceptance`、`evidence`、`tools_used`、`blocker`、`baseline_commit`。
+`tasks/TASK-0001.json`：`id`、`module_id`、`title`、`owner`、`status`、`write_scope`、`acceptance`、`evidence`、`tools_used`、`blocker`、`baseline_commit`、`end_commit`。
 
 任务状态：
 
@@ -135,7 +137,7 @@ Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/
 
 `handoffs/handoff-0001.md` front matter：`handoff_id`、`session`、`summary`、`next`、`invariants`、`risks`、`first_read`、`quality_gate`、`created_at`。
 
-`riccon handoff new` 会先检查：没有 `in_progress`/`review` 任务；done 任务都有证据；phase 为 modules/release/operate 时 module gate 为 pass，且 gate 的 module 必须是当前/最后一个 done 模块；gate 的 `checked_at` 不能早于最新任务或评审；release gate 不是 fail，operate 阶段必须 pass；`next` 非空且不是占位词；`first_read` 非空且路径存在。任一项失败就拒绝写 handoff。`first_read` 传空数组会回退默认列表，不会绕过检查。`quality_gate.product_acceptance_open` 记录尚未完成的 Product/用户验收；`riccon status` 会在 last handoff 早于最后一个 done 模块时标记 `stale`。
+`riccon handoff new` 会先检查：没有 `in_progress`/`review` 任务；done 任务都有证据；phase 为 modules/release/operate 时 module gate 为 pass，且 gate 的 module 必须是当前/最后一个 done 模块；gate 的 `checked_at` 不能早于最新任务或评审；release gate 不是 fail，operate 阶段必须 pass；`next` 非空且不是占位词；`first_read` 非空且路径存在。任一项失败就拒绝写 handoff。`first_read` 传空数组会回退默认列表，不会绕过检查；默认列表在项目存在 `docs/COLLABORATION.md` 时会包含它。`quality_gate.product_acceptance_open` 记录尚未完成的 Product/用户验收；`riccon status` 会在 last handoff 早于最后一个 done 模块时标记 `stale`。
 
 触发时机：每个模块 gate 完成后、phase 切换、发出决策/评审包后、会话暂停超过 24h、切换项目/风险等级/模型、进入 T4/生产批准前。输入接近 120K tokens、300/440 steps、60 次工具调用或自动 compaction 一次只是**检查点**，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须满足：状态/证据/review/gate 已更新、代码文档可恢复、没有半写文件/未完成 subagent/未应用决策、`next` 可直接执行、新会话无需重读旧聊天。任何一项不满足就继续或标 blocked；不得为了省成本跳过测试、E2E、独立 review 或证据。handoff 不替代 gate、review 或用户批准。handoff 后新开 session 运行 `/riccon-resume`。
 
@@ -162,7 +164,7 @@ Gate 结果写入 `state.gate`。`riccon module update M01 --status done` 会运
 
 - 合同有效，phase 为 `release` 或 `operate`；
 - 所有模块 `done`；
-- 每个模块的 `product_acceptance.product_status` 为 `pass` 且 `user_status` 为 `accepted`（旧模块无记录时只 warning）；
+- 每个模块的 `product_acceptance.product_status` 为 `pass` 且 `user_status` 为 `accepted`（旧模块无记录或双 `not-recorded` 时只 warning）；
 - 发布记录存在且状态为 `approved`/`released`；
 - 批准决策存在、已 `answered`、owner 为 `user`、`answer_kind: approve`，并绑定同一 `release_id` 和 `environment`；`answer_sha256` 匹配，时间线不倒置；有新审批时 `release_sha256` 必须匹配当前 version/scope/artifacts 原始字节、EV JSON/日志、绑定该 release 的 RELEASE 评审与第二评审文件；
 - 发布 evidence 全部存在、属于已知任务、哈希匹配、非 manual、exit 0；
@@ -182,6 +184,7 @@ Gate 结果写入 `state.gate`。`riccon module update M01 --status done` 会运
 ```bash
 riccon init
 riccon adopt --write
+riccon upgrade [--write] [--adopt-legacy]
 riccon contract validate
 riccon contract sync
 riccon state validate

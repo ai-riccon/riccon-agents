@@ -1,5 +1,13 @@
 # 变更日志
 
+## 0.1.6（2026-11-19）
+
+- 单一真源收敛：模型和步数以 `templates/agents/models.yml` 为准，权限和 agent frontmatter 由 `sync:agents` 同步，doctor 校验版本/模型/步数。
+- 验收状态集中到 `acceptance.mjs`，从 module schema 读取枚举；Product pass 和用户最终验收增加生命周期约束。
+- `state.validate` 增加验收顺序 warning；`state.schema.json` 补齐 `release_gate`。
+- 目标项目 `AGENTS.md` 拆分为合同、内容索引、硬规则和 `docs/COLLABORATION.md` 详细规则；新增 managed team block 和 `riccon upgrade` 的同步基础。
+- 修正 Product 预验收时点、下一模块解锁条件、review 命令、6 项 acceptance 阈值等文案漂移。
+
 ## 0.1.5（2026-11-17）
 
 - 证据命令解析加固：新增轻量 shell 分段分析，未加引号的管道默认拒绝，`||` 只允许 `exit 非零`，`;`/后台 `&` 后的 `echo`、`true`、`cat`、`tee`、`sleep`、`exit 0` 拒绝。

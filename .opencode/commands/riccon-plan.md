@@ -6,7 +6,7 @@ description: 把已批准的 MVC 和模块路线图拆成模块与任务，写�
 
 加载 `riccon-core` 和 `riccon-contract`。
 
-1. 读 Project Contract、`.riccon/state.json` 和最新 handoff。
+1. 读 Project Contract、`docs/COLLABORATION.md`（如存在）、`.riccon/state.json` 和最新 handoff。
 2. MVC 未定义时停下来，请用户确认。
 3. 创建或更新模块计划：
    - 纵向切片，每个模块有用户可见结果；

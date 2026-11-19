@@ -88,6 +88,12 @@ test('install copies the team and backs up existing files', (t) => {
   );
   assert.equal(readFileSync(backupLead, 'utf8'), 'old lead definition\n');
 
+  mkdirSync(join(configDir, 'skills', 'x-components'), { recursive: true });
+  writeFileSync(
+    join(configDir, 'skills', 'x-components', 'SKILL.md'),
+    '---\nname: x-components\ndescription: React components\n---\n\nReact\n',
+  );
+
   const installedCli = join(configDir, 'riccon', 'scripts', 'riccon.mjs');
   const doctor = spawnSync(process.execPath, [installedCli, 'doctor', '--json'], {
     encoding: 'utf8',

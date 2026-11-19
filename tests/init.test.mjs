@@ -44,6 +44,7 @@ test('init creates the project skeleton', (t) => {
     'AGENTS.md',
     'docs/PRODUCT.md',
     'docs/ARCHITECTURE.md',
+    'docs/COLLABORATION.md',
     'docs/RUNBOOK.md',
     'docs/SANDBOX.md',
     'docs/adr/README.md',

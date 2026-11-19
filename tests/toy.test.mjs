@@ -102,10 +102,6 @@ test('toy project: init → task → evidence → gate fail → gate pass → ha
       'M01',
       '--product-status',
       'pass',
-      '--user-status',
-      'accepted',
-      '--acceptance-decision',
-      'DEC-0001',
       '--project',
       dir,
     ]).code,
@@ -121,6 +117,20 @@ test('toy project: init → task → evidence → gate fail → gate pass → ha
     dir,
   ]);
   assert.equal(done.code, 0, done.stderr);
+  assert.equal(
+    run([
+      'module',
+      'update',
+      'M01',
+      '--user-status',
+      'accepted',
+      '--acceptance-decision',
+      'DEC-0001',
+      '--project',
+      dir,
+    ]).code,
+    0,
+  );
 
   const handoff = runJson([
     'handoff',

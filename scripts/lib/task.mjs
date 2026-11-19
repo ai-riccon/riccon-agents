@@ -16,6 +16,13 @@ import {
 } from './project.mjs';
 import { checkGate } from './gate.mjs';
 import {
+  FINAL_USER_STATUSES,
+  PRODUCT_STATUSES,
+  USER_STATUSES,
+  hasProductPass,
+  isAcceptanceOpen,
+} from './acceptance.mjs';
+import {
   gitCommitExists,
   gitSnapshot,
   isAncestor,
@@ -258,43 +265,63 @@ export function updateModule(projectDir, moduleId, input) {
   }
 
   if (input.productAcceptance !== undefined) {
-    const productStatuses = [
-      'not-recorded',
-      'pending',
-      'pass',
-      'changes-requested',
-      'blocked',
-    ];
-    const userStatuses = [
-      'not-recorded',
-      'pending',
-      'accepted',
-      'rejected',
-      'conditional',
-    ];
     const productStatus = input.productAcceptance.productStatus;
     const userStatus = input.productAcceptance.userStatus;
-    if (productStatus !== undefined && !productStatuses.includes(productStatus)) {
+    if (
+      productStatus !== undefined &&
+      !PRODUCT_STATUSES.includes(productStatus)
+    ) {
       fail(`invalid product acceptance status "${productStatus}"`, {
         code: 'ERR_PRODUCT_ACCEPTANCE',
       });
     }
-    if (userStatus !== undefined && !userStatuses.includes(userStatus)) {
+    if (userStatus !== undefined && !USER_STATUSES.includes(userStatus)) {
       fail(`invalid user acceptance status "${userStatus}"`, {
         code: 'ERR_PRODUCT_ACCEPTANCE',
       });
     }
+
     const current = module.product_acceptance || {};
+    const nextProductStatus =
+      productStatus !== undefined
+        ? productStatus
+        : current.product_status || 'not-recorded';
     const nextUserStatus =
       userStatus !== undefined
         ? userStatus
         : current.user_status || 'not-recorded';
+
+    // Product 预验收只能在 gate 之后、done 之前或 done 的复查中记录。
+    if (
+      productStatus === 'pass' &&
+      !['review_pending', 'done'].includes(module.status)
+    ) {
+      fail(
+        `module ${moduleId} cannot record Product pass while ${module.status}; move it to review_pending after gate and before done`,
+        { code: 'ERR_PRODUCT_ACCEPTANCE' },
+      );
+    }
+
+    // 用户最终验收是 done 之后的独立步骤，不能提前写入。
+    if (
+      FINAL_USER_STATUSES.includes(userStatus) &&
+      module.status !== 'done'
+    ) {
+      fail(
+        `module ${moduleId} cannot record user acceptance "${userStatus}" before done; finish the module first, then get user acceptance`,
+        { code: 'ERR_PRODUCT_ACCEPTANCE' },
+      );
+    }
+    if (userStatus === 'accepted' && nextProductStatus !== 'pass') {
+      fail(
+        `module ${moduleId} cannot record user acceptance before Product pre-acceptance passes`,
+        { code: 'ERR_PRODUCT_ACCEPTANCE' },
+      );
+    }
+
     module.product_acceptance = {
       ...current,
-      product_status:
-        productStatus !== undefined
-          ? productStatus
-          : current.product_status || 'not-recorded',
+      product_status: nextProductStatus,
       user_status: nextUserStatus,
       decision_id:
         input.productAcceptance.decisionId !== undefined
@@ -353,16 +380,7 @@ export function updateModule(projectDir, moduleId, input) {
       }
       const openAcceptance = (module.depends_on || [])
         .map((dependency) => modules.find((item) => item.id === dependency))
-        .filter(
-          (dependency) =>
-            dependency &&
-            (['pending', 'changes-requested', 'blocked'].includes(
-              dependency.product_acceptance?.product_status,
-            ) ||
-              ['pending', 'rejected', 'conditional'].includes(
-                dependency.product_acceptance?.user_status,
-              )),
-        );
+        .filter((dependency) => dependency && isAcceptanceOpen(dependency));
       const unaccepted = openAcceptance.find(
         (dependency) =>
           !(
@@ -376,6 +394,20 @@ export function updateModule(projectDir, moduleId, input) {
           `module ${moduleId} cannot start; dependency ${unaccepted.id} acceptance is product=${acceptance.product_status || 'unknown'}, user=${acceptance.user_status || 'unknown'}; fix it with kind=fix and fixes_module=${unaccepted.id}, or wait for user acceptance (use --force only to normalize legacy state)`,
           { code: 'ERR_PRODUCT_ACCEPTANCE' },
         );
+      }
+      // 从 review_pending/blocked 退回构建时，旧的 Product pass 或用户验收已失效。
+      if (
+        hasProductPass(module) ||
+        FINAL_USER_STATUSES.includes(module.product_acceptance?.user_status)
+      ) {
+        module.product_acceptance = {
+          ...(module.product_acceptance || {}),
+          product_status: 'pending',
+          user_status: 'pending',
+          decision_id: null,
+          accepted_at: null,
+          updated_at: nowIso(),
+        };
       }
       if (!module.started_at) module.started_at = nowIso();
       applyModuleToState(state, module);

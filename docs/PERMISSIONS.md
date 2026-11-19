@@ -39,7 +39,7 @@ Agent 定义包含以下 ask：
 
 OpenCode 使用有序规则，最后匹配生效。Agent 定义把宽泛 allow 放在前面，具体 ask 放在后面。`riccon doctor` 会在 ask 排在宽泛 allow 之前时报错，因为宽泛 allow 会覆盖 ask。
 
-`templates/agents/permissions.yml` 是唯一事实源。改完运行 `npm run sync:permissions`。
+`templates/agents/permissions.yml` 是权限的唯一事实源；`templates/agents/models.yml` 是模型和步数的唯一事实源。改完运行 `npm run sync:agents`（`sync:permissions` 保留为兼容别名）。
 
 ## 诚实的限制
 

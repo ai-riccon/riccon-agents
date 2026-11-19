@@ -7,6 +7,7 @@ import {
   readTasks,
 } from './project.mjs';
 import { loadContract } from './contract.mjs';
+import { isAcceptanceOpen } from './acceptance.mjs';
 
 /**
  * @param {string} projectDir
@@ -67,17 +68,7 @@ export function getStatus(projectDir) {
           Date.parse(lastDoneModule.finished_at)),
   );
   const openAcceptance = modules
-    .filter((module) => {
-      if (module.status === 'planned') return false;
-      const acceptance = module.product_acceptance;
-      if (!acceptance) return false;
-      return (
-        ['pending', 'changes-requested', 'blocked'].includes(
-          acceptance.product_status,
-        ) ||
-        ['pending', 'rejected', 'conditional'].includes(acceptance.user_status)
-      );
-    })
+    .filter((module) => module.status !== 'planned' && isAcceptanceOpen(module))
     .map((module) => ({
       id: module.id,
       title: module.title,

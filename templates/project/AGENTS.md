@@ -109,31 +109,42 @@ budget:
 
 <!-- riccon:contract:end -->
 
-## 协作约定
+<!-- riccon:team:start -->
+## 内容索引
 
-- 开始工作前读 `.riccon/state.json`、最新 handoff 和本文件中的合同。
-- 不假设合同里没有的目录、命令或工具。
-- 每个任务都有写入范围和验收标准；不要静默扩大任何一项。
-- 证据是命令、退出码和输出路径，不是声明。strict 绑定下，review 的 `dod_evidence` 必须把 acceptance/build/tests/e2e/coverage/docs 指向真实、通过、已评审的证据；命令必须与合同 `commands` 对应项匹配，空命令和 `not-implemented`/占位命令直接失败；未加引号管道默认失败，`||` 只允许 `exit 非零`，`; true`、`exit 0`、后台 `&` 等掩盖失败也失败。
-- 不要把密钥写进仓库、状态、日志或提示词。
-- 不要编辑 `.riccon/` 中其他角色负责的决策或报告。
-- 代码变更同步更新文档，或记录 no-impact 理由。
-- 产品范围、不可逆技术选择、生产、花钱和破坏性操作由用户拥有；其余授权给团队。
-- 文档、注释、决策包、评审包和 handoff 默认中文；代码注释必须中文；代码标识符、命令和字段名保持英文。
-- 代码注释至少方法级；复杂业务流程必须有行级或段落注释；不写重复、无信息量的注释。
-- Architect 在 Builder 开始前创建 `docs/CODING-STANDARDS.md`，按技术栈和行业最佳实践定义编码规范；Builder 必须遵循，Verifier 检查。
-- “覆盖率”默认指代码行/分支覆盖率，不是 AC 覆盖；门槛见合同 `constraints.coverage`，报告必须可由 `commands.coverage` 复现。
-- 现有历史代码的注释迁移单独成任务，不和行为变更混合。
-- Product 的 brief/AC/non-goals 必须经 Lead 完整性评审、用户范围批准、Architect 可行性评审和 Verifier 可验证性检查；未批准不进入模块实现。
-- Architect 的架构/ADR 必须经 Lead 完整性、用户不可逆决策、Verifier 可测试性/安全边界、Ops 可运维性检查；未评审的 ADR 保持 `proposed`。
-- Builder 只把任务移到 review，不自己 done；高风险任务（认证、权限、迁移、并发、安全、AI 工具调用）done 前必须有独立 Verifier 评审。
-- 任务级/架构级独立评审写到 `.riccon/reviews/tasks/<task>-review.md`；模块评审写到 `.riccon/reviews/<module>-review.md`。任务评审不参与模块 gate，高风险任务 closeout 必须引用。
-- gate 检查通过后、模块标记 done 前，先由 Product 按需求、UX 和范围做预验收；Product pass 后才标记 done，再提交用户最终验收，结论记录在 `docs/ACCEPTANCE.md`。用户未 accepted 前不启动下一个用户可见模块；验收失败用 `kind: fix` + `fixes_module`，或在显式决策后重新打开。
-- 模块过大时在构建前拆分，用 `split_from`/`aliases` 记录关系；模块 ID 仍是 `M` + 数字。任务进入 `in_progress` 前模块必须是 `building`，依赖全部 done；一个任务只承载一个可独立验收的用户可见结果。
-- 模块评审的 AC 对账必须引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据。
-- 测试按两层执行：任务级跑受影响测试；模块 gate 在最终提交上跑一次全量合同 test/coverage/E2E。高风险、跨模块契约和迁移任务在任务完成时跑全量；任务级定向证据不替代模块 review 的全量绑定。
-- 同一份代码的全量验证只跑一次；提交后用 `riccon evidence run` 记录这次运行，不要先跑一遍再取证，也不要为取证新建临时工作树。
-- 长测试设置超时并保留日志；超时是失败，不是通过。
-- 所有时间默认北京时间（`Asia/Shanghai`，UTC+08:00）；数据库用带时区类型，API/日志/UI 使用带偏移的 ISO 8601。
-- 任务过大（`write_scope` 超过 8 项或 acceptance 超过 6 项）时先拆分；不要用一个大任务让 Builder 长时间只读。
-- 模块结束用 `riccon module cost` 记录 requests/tokens/墙钟/成本估算；全零且 `confidence` 不是 `unmeasured` 会被拒绝，0 不等于免费。
+本文件保留合同和硬规则；详细协作规则按下面索引读取。开始或恢复任何模块前，必须读 Project Contract 和 `docs/COLLABORATION.md`。
+
+| 内容 | 位置 |
+|---|---|
+| 技术栈、命令、工具、DoD、预算 | `AGENTS.md#project-contract` |
+| 角色边界、模块/任务生命周期、验收顺序、评审、证据 | `docs/COLLABORATION.md` |
+| 产品目标、用户、MVC、non-goals、AC | `docs/PRODUCT.md` |
+| 架构、数据模型、API/事件契约、ADR | `docs/ARCHITECTURE.md`、`docs/adr/` |
+| 编码规范、注释、覆盖率门槛 | `docs/CODING-STANDARDS.md` |
+| 产品验收和用户验收 | `docs/ACCEPTANCE.md` |
+| 运行、部署、回滚 | `docs/RUNBOOK.md` |
+| 沙箱和隔离边界 | `docs/SANDBOX.md` |
+| 执行状态、任务、证据、评审、handoff | `.riccon/state.json` 和最新 handoff |
+| 团队内核、命令和 skills | 已安装的 `~/.config/opencode/riccon/` |
+
+## 硬规则
+
+以下规则即使不读详细文档也必须遵守；详细说明见 `docs/COLLABORATION.md`。
+
+- 合同是技术栈、命令、工具和约束的唯一事实源；合同里没有的目录、命令或工具不要假设。
+- 每个任务都有 `write_scope` 和验收标准；不要静默扩大任何一项。
+- 先提交，再 `riccon evidence run`；strict 下 dirty 证据、空命令、占位命令和掩盖失败的写法不能让 gate 通过。
+- Product 的 brief/AC/non-goals 必须经过 Lead、用户、Architect、Verifier 的评审链；未批准不进入模块实现。
+- Architect 的架构/ADR 必须经过 Lead、用户（不可逆项）、Verifier、Ops 评审；未评审的 ADR 保持 `proposed`。
+- Builder 只把任务移到 `review`，不自己 `done`；高风险任务在 done 前必须有独立 Verifier 评审。
+- gate 通过后、模块 done 前，Product 预验收必须 `pass`；done 后再做用户最终验收，用户未 `accepted` 前不启动下一个用户可见模块。
+- 验收失败用 `kind: fix` + `fixes_module`，或在显式决策后重新打开；不要只靠标题或 `depends_on`。
+- 不把密钥写进仓库、`.riccon/`、日志、任务卡、证据、提示词或 handoff。
+- 产品范围、不可逆技术选择、生产发布、花钱和破坏性操作由用户拥有；其余授权给团队。
+- 文档、注释、commit message、决策包、评审包和 handoff 默认中文；代码注释必须中文，标识符、命令、字段名保持英文。
+- 所有时间默认北京时间（`Asia/Shanghai`，UTC+08:00）；数据库和 API/日志/UI 按合同约定使用带偏移时间。
+<!-- riccon:team:end -->
+
+## 项目补充
+
+项目特定规则写在这里，例如成本口径、数据库时区、验证分层或工具路由。项目补充不能削弱上面的硬规则和 Project Contract。

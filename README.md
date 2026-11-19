@@ -2,7 +2,7 @@
 
 **受监督的 AI 智能体软件交付团队。** 用合同、状态、证据、独立评审和门禁，把 OpenCode 中的多个 agent 组织成可审计的交付流程。
 
-当前版本：`0.1.5`。这是**受监督原型**，不是“全自主软件公司”，生产发布仍需独立批准。
+当前版本：`0.1.6`。这是**受监督原型**，不是“全自主软件公司”，生产发布仍需独立批准。
 
 ## 它解决什么问题
 
@@ -94,6 +94,7 @@ node /path/to/riccon-agents/scripts/riccon.mjs init \
 ```bash
 riccon init
 riccon adopt --write
+riccon upgrade [--write] [--adopt-legacy]
 riccon contract validate|sync|show
 riccon module new|update|cost|list|show
 riccon task new|update|list|show

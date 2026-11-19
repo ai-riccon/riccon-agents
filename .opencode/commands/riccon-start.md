@@ -10,7 +10,7 @@ description: 启动或恢复一个 Riccon 项目。初始化 .riccon/，确认 P
    - macOS/Linux：`node "$HOME/.config/opencode/riccon/scripts/riccon.mjs" status --project .`
    - Windows：`node "%USERPROFILE%\.config\opencode\riccon\scripts\riccon.mjs" status --project .`
 2. `.riccon/` 不存在时先运行 `riccon init`。已存在时不要重复初始化；读状态和最新 handoff。
-3. 读 `AGENTS.md` 里的 Project Contract，运行 `riccon contract validate`。合同缺失或为空时：
+3. 读 `AGENTS.md` 里的 Project Contract 和 `docs/COLLABORATION.md`（如存在），运行 `riccon contract validate`。合同缺失或为空时：
    - 只读检查仓库。
    - 提出合同草案（stack、commands、tools、repo map），附证据。
    - 请用户确认产品目标、用户、MVC、non-goals 和成功指标。

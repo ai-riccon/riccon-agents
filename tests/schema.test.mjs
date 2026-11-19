@@ -6,6 +6,14 @@ import YAML from 'yaml';
 import { validateSchema } from '../scripts/lib/schema.mjs';
 import { defaultContract, extractContractBlock } from '../scripts/lib/contract.mjs';
 import { parseFrontmatter } from '../scripts/lib/yamlx.mjs';
+import {
+  MODULE_TRANSITIONS,
+  TASK_TRANSITIONS,
+} from '../scripts/lib/state-machine.mjs';
+import {
+  PRODUCT_STATUSES,
+  USER_STATUSES,
+} from '../scripts/lib/acceptance.mjs';
 
 const root = join(import.meta.dirname, '..');
 
@@ -85,4 +93,43 @@ test('contract block can be found by heading without markers', () => {
   assert.ok(block);
   assert.equal(block.kind, 'heading');
   assert.match(block.yamlText, /contract_version/);
+});
+
+test('runtime lifecycle enums stay aligned with schemas', () => {
+  const moduleSchema = JSON.parse(
+    readFileSync(join(root, 'schemas/module.schema.json'), 'utf8'),
+  );
+  const taskSchema = JSON.parse(
+    readFileSync(join(root, 'schemas/task.schema.json'), 'utf8'),
+  );
+  const acceptance = moduleSchema.properties.product_acceptance.properties;
+
+  assert.deepEqual(
+    [...PRODUCT_STATUSES].sort(),
+    [...acceptance.product_status.enum].sort(),
+  );
+  assert.deepEqual(
+    [...USER_STATUSES].sort(),
+    [...acceptance.user_status.enum].sort(),
+  );
+  assert.deepEqual(
+    Object.keys(MODULE_TRANSITIONS).sort(),
+    [...moduleSchema.properties.status.enum].sort(),
+  );
+  assert.deepEqual(
+    Object.keys(TASK_TRANSITIONS).sort(),
+    [...taskSchema.properties.status.enum].sort(),
+  );
+
+  for (const table of [MODULE_TRANSITIONS, TASK_TRANSITIONS]) {
+    for (const [from, targets] of Object.entries(table)) {
+      assert.ok(from, 'transition source must exist');
+      for (const target of targets) {
+        assert.ok(
+          Object.keys(table).includes(target),
+          `transition target ${target} must be a known status`,
+        );
+      }
+    }
+  }
 });

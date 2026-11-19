@@ -42,6 +42,28 @@
         "reasons": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "release_gate": {
+      "type": ["object", "null"],
+      "required": [
+        "status",
+        "release_id",
+        "environment",
+        "checked_at",
+        "reasons"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "status": { "enum": ["none", "pass", "fail"] },
+        "release_id": { "type": ["string", "null"] },
+        "environment": {
+          "type": ["string", "null"],
+          "enum": ["sandbox", "staging", "production", null]
+        },
+        "checked_at": { "type": ["string", "null"] },
+        "reasons": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "health": { "enum": ["unknown", "green", "yellow", "red"] },
     "last_handoff": { "type": ["string", "null"] },
     "next_action": { "type": "string" },

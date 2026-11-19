@@ -8,7 +8,7 @@ description: 从状态和最新 handoff 恢复 Riccon 项目，不重读全部�
 
 1. 运行 `riccon status --project .`。
 2. 读 `.riccon/state.json`、最新 `.riccon/handoffs/handoff-*.md`、当前模块和开放决策。
-3. 只读 `AGENTS.md` 的 Project Contract 和相关的 architecture/ADR。
+3. 读 `AGENTS.md` 的 Project Contract、`docs/COLLABORATION.md`（如存在）和相关的 architecture/ADR。
 4. 汇总：
    - 已完成什么，证据在哪；
    - 正在进行什么，谁负责；

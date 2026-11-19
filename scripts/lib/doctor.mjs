@@ -10,16 +10,9 @@ import {
   readText,
 } from './fsx.mjs';
 import { parseFrontmatter, parseYaml } from './yamlx.mjs';
+import { TEAM_VERSION } from './version.mjs';
 
 const EXPECTED_AGENTS = ['lead', 'product', 'architect', 'builder', 'verifier', 'ops'];
-const MIN_STEPS = {
-  lead: 440,
-  product: 240,
-  architect: 400,
-  builder: 600,
-  verifier: 400,
-  ops: 300,
-};
 const EXPECTED_COMMANDS = [
   'riccon-start',
   'riccon-status',
@@ -122,10 +115,62 @@ export function runDoctor(teamRoot) {
     }
   }
 
+  // 版本号：version.mjs 为源；仓库里再校验 package 文件和文档，安装目录缺失时跳过。
+  const versionSource = readText(
+    join(teamRoot, 'scripts', 'lib', 'version.mjs'),
+  );
+  const versionMatch = versionSource.match(
+    /TEAM_VERSION\s*=\s*['"]([^'"]+)['"]/,
+  );
+  /** @type {Record<string, string | undefined>} */
+  const versionValues = {
+    'version.mjs': versionMatch?.[1],
+  };
+  if (exists(join(teamRoot, 'package.json'))) {
+    versionValues['package.json'] = readJson(
+      join(teamRoot, 'package.json'),
+    ).version;
+  }
+  if (exists(join(teamRoot, 'package-lock.json'))) {
+    const packageLock = readJson(join(teamRoot, 'package-lock.json'));
+    versionValues['package-lock.json'] = packageLock.version;
+    versionValues['package-lock.json packages'] =
+      packageLock.packages?.['']?.version;
+  }
+  for (const [file, value] of Object.entries(versionValues)) {
+    if (value !== TEAM_VERSION) {
+      add(
+        'version',
+        'fail',
+        `${file} version is ${value || '(missing)'}; expected ${TEAM_VERSION}`,
+      );
+    }
+  }
+  for (const [file, pattern] of [
+    ['README.md', /当前版本：`([^`]+)`/],
+    ['AGENTS.md', /当前版本：`([^`]+)`/],
+    ['CHANGELOG.md', /^##\s+([0-9]+\.[0-9]+\.[0-9]+)/m],
+  ]) {
+    if (!exists(join(teamRoot, file))) continue;
+    const text = readText(join(teamRoot, file));
+    const match = text.match(pattern);
+    if (match?.[1] !== TEAM_VERSION) {
+      add(
+        'version-docs',
+        'fail',
+        `${file} version is ${match?.[1] || '(missing)'}; expected ${TEAM_VERSION}`,
+      );
+    }
+  }
+
   // Agent 定义
   const permissionsTemplate = parseYaml(
     readText(join(templatesDir, 'agents', 'permissions.yml')),
   );
+  const modelsTemplate = parseYaml(
+    readText(join(templatesDir, 'agents', 'models.yml')),
+  );
+  const stepsTemplate = modelsTemplate.steps || {};
   const agentFiles = listDir(agentDir, (name) => name.endsWith('.md'));
   add('agents', 'pass', `${agentFiles.length} agent definition(s) found`);
 
@@ -160,7 +205,7 @@ export function runDoctor(teamRoot) {
       add(
         'agent-permissions-sync',
         'fail',
-        `${display} permissions are out of sync; run \`npm run sync:permissions\``,
+        `${display} permissions are out of sync; run \`npm run sync:agents\``,
       );
     }
 
@@ -171,12 +216,26 @@ export function runDoctor(teamRoot) {
       add('agent-mode', 'fail', `${display} must be mode subagent`);
     }
 
-    const minSteps = MIN_STEPS[role];
-    if (minSteps && (!Number.isInteger(data.steps) || data.steps < minSteps)) {
+    const expectedModel = modelsTemplate[role];
+    if (expectedModel && data.model !== expectedModel) {
+      add(
+        'agent-model-sync',
+        'fail',
+        `${display} model is ${data.model || '(missing)'}; expected ${expectedModel} from templates/agents/models.yml; run \`npm run sync:agents\``,
+      );
+    }
+    const expectedSteps = stepsTemplate[role];
+    if (!Number.isInteger(expectedSteps)) {
+      add(
+        'agent-steps-template',
+        'fail',
+        `templates/agents/models.yml steps.${role} must be an integer`,
+      );
+    } else if (data.steps !== expectedSteps) {
       add(
         'agent-steps',
         'fail',
-        `${display} steps must be an integer >= ${minSteps} (found ${data.steps})`,
+        `${display} steps is ${data.steps}; expected ${expectedSteps} from templates/agents/models.yml; run \`npm run sync:agents\``,
       );
     }
 
@@ -341,11 +400,25 @@ export function runDoctor(teamRoot) {
     if (!parsed.body.trim()) add('skill-body', 'fail', `${display} has an empty body`);
   }
 
-  // 技术栈独立性检查
-  const scanDirs = [agentDir, commandDir, skillsDir];
-  const scanFiles = listFilesRecursive(scanDirs[0], (file) => file.endsWith('.md'));
-  scanFiles.push(...listFilesRecursive(scanDirs[1], (file) => file.endsWith('.md')));
-  scanFiles.push(...listFilesRecursive(scanDirs[2], (file) => file.endsWith('.md')));
+  // 技术栈独立性检查：只扫描团队管理的 agent/command/skill，忽略用户安装的其他 skills。
+  const scanFiles = listFilesRecursive(agentDir, (file) =>
+    file.endsWith('.md'),
+  );
+  scanFiles.push(
+    ...listFilesRecursive(
+      commandDir,
+      (file) =>
+        file.endsWith('.md') &&
+        basename(file).startsWith('riccon-'),
+    ),
+  );
+  scanFiles.push(
+    ...listFilesRecursive(skillsDir, (file) => {
+      if (!file.endsWith('.md')) return false;
+      const relativePath = relative(skillsDir, file);
+      return relativePath.split(/[\\/]/)[0].startsWith('riccon-');
+    }),
+  );
   const templateAgents = join(templatesDir, 'project', 'AGENTS.md');
   if (exists(templateAgents)) scanFiles.push(templateAgents);
 
@@ -380,6 +453,38 @@ export function runDoctor(teamRoot) {
         'templates/project/AGENTS.md must set quality.evidence_binding: strict',
       );
     }
+    if (
+      !text.includes('<!-- riccon:team:start -->') ||
+      !text.includes('<!-- riccon:team:end -->')
+    ) {
+      add(
+        'template-team-block',
+        'fail',
+        'templates/project/AGENTS.md must keep the managed team block markers',
+      );
+    }
+    if (!text.includes('docs/COLLABORATION.md')) {
+      add(
+        'template-collaboration-index',
+        'fail',
+        'templates/project/AGENTS.md must index docs/COLLABORATION.md',
+      );
+    }
+  }
+
+  const templateCollaboration = join(
+    teamRoot,
+    'templates',
+    'project',
+    'docs',
+    'COLLABORATION.md',
+  );
+  if (!exists(templateCollaboration)) {
+    add(
+      'template-collaboration',
+      'fail',
+      'templates/project/docs/COLLABORATION.md is missing',
+    );
   }
 
   const templateModule = join(teamRoot, 'templates', 'state', 'module.json');
