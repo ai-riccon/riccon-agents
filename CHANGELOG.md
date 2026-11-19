@@ -1,5 +1,10 @@
 # 变更日志
 
+## 0.1.8（2026-11-20）
+
+- 修复 handoff gate 新鲜度检查：只与被 gate 模块的任务比较；其他模块的 planned/ready 任务不再让 gate 过期。
+- 新增回归测试：新模块 planned 任务不阻塞 handoff；被 gate 模块的任务更新仍会触发 stale。
+
 ## 0.1.7（2026-11-20）
 
 - 验证效率：verifier 每个 task 新开上下文；长命令移到后台后结束回合等待通知，禁止 `sleep`/`tail` 轮询；模块 gate 的 `test` 与 `coverage` 可共用同一条 coverage 全量 EV。

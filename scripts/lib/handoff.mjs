@@ -86,9 +86,14 @@ export function createHandoff(input) {
       );
     }
     const gateTime = Date.parse(state.gate.checked_at || '');
+    // gate 新鲜度只覆盖被 gate 的模块；其他模块的 planned/ready 任务不应让 gate 过期。
+    const gatedModule = state.gate.module_id || expectedModule;
+    const gatedTasks = gatedModule
+      ? tasks.filter((task) => task.module_id === gatedModule)
+      : tasks;
     const latestTaskTime = Math.max(
       0,
-      ...tasks.map((task) => Date.parse(task.updated_at || '')),
+      ...gatedTasks.map((task) => Date.parse(task.updated_at || '')),
     );
     const reviews = readReviews(input.projectDir);
     const latestReviewTime = Math.max(

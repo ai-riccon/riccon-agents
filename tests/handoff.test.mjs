@@ -150,6 +150,77 @@ test('handoff requires a gate for the current module and a fresh check', (t) => 
   assert.match(stale.stdout, /gate is stale/);
 });
 
+test('handoff gate freshness ignores planned tasks in other modules', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  const { task } = addModuleAndTask(dir);
+
+  const stateFile = join(dir, '.riccon', 'state.json');
+  const state = readJson(stateFile);
+  state.gate = {
+    status: 'pass',
+    module_id: 'M01',
+    checked_at: new Date().toISOString(),
+    reasons: [],
+  };
+  writeJson(stateFile, state);
+
+  const nextModule = runJson([
+    'module',
+    'new',
+    '--title',
+    'Next',
+    '--kind',
+    'feature',
+    '--project',
+    dir,
+  ]);
+  assert.equal(nextModule.code, 0, nextModule.stderr);
+  const nextTask = runJson([
+    'task',
+    'new',
+    '--module',
+    nextModule.json.module.id,
+    '--title',
+    'Later',
+    '--owner',
+    'riccon/builder-b2',
+    '--project',
+    dir,
+  ]);
+  assert.equal(nextTask.code, 0, nextTask.stderr);
+
+  const fresh = runJson([
+    'handoff',
+    'new',
+    '--next',
+    'Continue',
+    '--first-read',
+    '.riccon/state.json',
+    '--project',
+    dir,
+  ]);
+  assert.equal(fresh.code, 0, fresh.stdout + fresh.stderr);
+
+  assert.equal(
+    run(['task', 'update', task.id, '--status', 'ready', '--project', dir]).code,
+    0,
+  );
+  const stale = runJson([
+    'handoff',
+    'new',
+    '--next',
+    'Continue',
+    '--first-read',
+    '.riccon/state.json',
+    '--project',
+    dir,
+  ]);
+  assert.equal(stale.code, 1);
+  assert.match(stale.stdout, /gate is stale/);
+});
+
 test('handoff ids increment and can be listed and shown', (t) => {
   const dir = tempDir();
   t.after(() => cleanup(dir));

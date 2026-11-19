@@ -1,1 +1,1 @@
-export const TEAM_VERSION = "0.1.7";
+export const TEAM_VERSION = "0.1.8";

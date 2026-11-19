@@ -52,7 +52,7 @@ npm run sync:agents
 
 ## 发布
 
-- 当前版本：`0.1.7`。
+- 当前版本：`0.1.8`。
 - 版本号同步修改：`package.json`、`package-lock.json`、`scripts/lib/version.mjs`、`README.md`、`AGENTS.md`、`CHANGELOG.md`；`riccon doctor` 会检查一致性。
 - 打 annotated tag：`vX.Y.Z`；tag 必须指向通过验证的 release commit。
 - 公开仓库只保留团队内核、模板、测试和公开文档；历史试点/审计材料不进入仓库。

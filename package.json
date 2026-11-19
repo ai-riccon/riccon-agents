@@ -1,6 +1,6 @@
 {
   "name": "riccon-agents",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "用于 0→1 软件交付的有界自治 OpenCode 智能体团队。",
   "private": true,
   "type": "module",
