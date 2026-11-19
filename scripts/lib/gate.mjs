@@ -31,6 +31,16 @@ const DOD_COMMANDS = {
   coverage: 'coverage',
 };
 
+/** builder 实例 owner 的前缀；用于识别实现角色，防止实例 owner 绕过独立性检查。 */
+function isBuilderRole(agent) {
+  return agent === 'riccon/builder' || String(agent || '').startsWith('riccon/builder-');
+}
+
+/** 真实 OpenCode 会话 ID；旧 review 的合成标签只产生 warning。 */
+function isRealSessionId(session) {
+  return /^ses_[A-Za-z0-9]+$/.test(String(session || ''));
+}
+
 /**
  * 归一化命令，用于判断证据命令是否覆盖合同命令：
  * 去掉 bash -lc 包装、外层引号和括号，合并空白并转小写。
@@ -536,12 +546,14 @@ export function checkGate({ projectDir, moduleId, allowOverrun = false, requireS
     } else if (
       review.data.reviewer.agent &&
       review.data.reviewer.agent !== 'riccon/verifier' &&
-      tasks.some((task) => task.owner === review.data.reviewer.agent)
+      (isBuilderRole(review.data.reviewer.agent) ||
+        review.data.reviewer.agent === 'riccon/lead' ||
+        tasks.some((task) => task.owner === review.data.reviewer.agent))
     ) {
       add(
         'review_independence',
         'fail',
-        `reviewer ${review.data.reviewer.agent} owns a task in ${moduleId}`,
+        `reviewer ${review.data.reviewer.agent} owns a task or is an implementation role in ${moduleId}`,
       );
     } else {
       add(
@@ -549,6 +561,13 @@ export function checkGate({ projectDir, moduleId, allowOverrun = false, requireS
         'pass',
         `reviewer ${review.data.reviewer.agent || review.data.verifier} is marked independent`,
       );
+      if (!isRealSessionId(review.data.reviewer.session)) {
+        add(
+          'review_session_format',
+          'warn',
+          `reviewer.session ${review.data.reviewer.session} is not a real ses_ session id; new reviews must use the actual OpenCode session id`,
+        );
+      }
     }
 
     if (review.data.verdict !== 'pass') {

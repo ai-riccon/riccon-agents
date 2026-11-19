@@ -1,5 +1,13 @@
 # 变更日志
 
+## 0.1.7（2026-11-20）
+
+- 验证效率：verifier 每个 task 新开上下文；长命令移到后台后结束回合等待通知，禁止 `sleep`/`tail` 轮询；模块 gate 的 `test` 与 `coverage` 可共用同一条 coverage 全量 EV。
+- 并行 builder：引入实例 owner 约定（如 `riccon/builder-b2`），同一 owner 仍只允许一个 `in_progress`；`--force` 不再绕过 active-task 冲突。
+- 状态完整性：`state validate` 增加“in_progress 任务必须出现在 active_tasks”的反向检查，修复 `--force` 造成的幽灵 active task。
+- 评审独立性：gate 识别 builder 实例 owner；新 review 要求真实 `ses_...` 会话 ID，旧合成标签只产生 warning。
+- 模板和文档同步：目标项目硬规则、协作文档、任务/评审模板和 doctor 增加实例 owner、单次全量、真实 session ID 约定。
+
 ## 0.1.6（2026-11-19）
 
 - 单一真源收敛：模型和步数以 `templates/agents/models.yml` 为准，权限和 agent frontmatter 由 `sync:agents` 同步，doctor 校验版本/模型/步数。

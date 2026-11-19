@@ -28,10 +28,10 @@ riccon evidence add --task TASK-0001 --command "npm test" --output test.log --ex
 ## 1.1 验证节奏
 
 - 任务级：审计最新 EV，跑受影响测试；高风险、跨模块契约、迁移或模块最后任务在最终提交上跑一次全量。
-- 模块级：在最终提交上跑一次全量合同 build/lint/typecheck/test/coverage/E2E，绑定模块 review 的 `dod_evidence`。
+- 模块级：在最终提交上跑一次全量合同 build/lint/typecheck/test/coverage/E2E，绑定模块 review 的 `dod_evidence`。合同允许时 `test` 和 `coverage` 共用同一条 coverage 全量命令和同一条 EV，禁止先跑 test 再跑 coverage 两遍。
 - 同一份代码的全量只跑一次；提交后用 `riccon evidence run` 记录这次运行，不要先跑一遍再取证，也不要为取证新建临时工作树。
 - 任务级定向 EV 可以支撑任务 done，但不能替代模块 review 的全量命令覆盖。
-- 长测试设置超时并保留日志；超时是失败，不是通过。
+- 长测试设置超时并保留日志；超时是失败，不是通过。命令被移到后台时结束回合等通知，禁止 `sleep`/`tail`/`ps` 轮询。
 
 ## 2. 按轨道的 DoD
 
@@ -66,7 +66,7 @@ T4 额外要求：威胁建模、负载/性能测试、容灾/回滚演练、明
 
 - 命令执行了零个测试；
 - 测试被跳过且没有 owner/到期时间；
-- retry 掩盖了 flake；
+- retry 掩盖了 flake；为通过而追加参数（例如 `--no-file-parallelism`）必须写 P2 finding + owner + 到期时间；
 - 测试没有断言，或只对坏状态做快照；
 - 命令吞掉错误或永远 exit 0；
 - 证据缺失、被截断，或来自另一个工作区；
@@ -108,6 +108,11 @@ T4 额外要求：威胁建模、负载/性能测试、容灾/回滚演练、明
 review_id: REV-M01-001
 module_id: M01
 verifier: riccon/verifier
+reviewer:
+  agent: riccon/verifier
+  session: ses_xxx
+  model: opencode-go/deepseek-v4.1-flash#max
+  independent: true
 verdict: pass | fail | blocked
 dod:
   acceptance: true
@@ -134,6 +139,8 @@ created_at: ...
 ```
 
 `quality.evidence_binding: strict` 时，`dod_evidence` 是必填项：每个 true 的 acceptance/build/tests/e2e/coverage/docs 必须指向真实、非 manual、exit 0、已列入 `reviewed_evidence` 的 EV；build/tests/e2e/coverage 的命令还要覆盖合同命令。不要用自报、空命令或 `not-implemented` 占位通过；未加引号管道默认被拒绝，`||` 只允许 `exit 非零`，`; true`/`exit 0`/后台 `&` 等掩盖失败的命令也会被 gate 拒绝。
+
+`reviewer.session` 必须是当前真实 `ses_...` 会话 ID；不要写 `ses_verifier_*` 或人类标签。旧 review 的合成标签只产生 warning，新 review 必须使用真实 ID。
 
 然后运行 `riccon gate check --module M01`。
 

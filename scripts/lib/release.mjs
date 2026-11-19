@@ -26,6 +26,15 @@ import { isAccepted } from "./acceptance.mjs";
 const T4_ARTIFACTS = ["threat_model", "load_test", "rollback_drill", "runbook"];
 const BASE_ARTIFACTS = ["rollback_drill", "runbook"];
 
+/** builder 实例 owner 的前缀；用于识别实现角色，防止实例 owner 绕过独立性检查。 */
+function isImplementationRole(agent) {
+  return (
+    agent === "riccon/builder" ||
+    agent === "riccon/lead" ||
+    String(agent || "").startsWith("riccon/builder-")
+  );
+}
+
 /**
  * 将 review findings 映射为 release 检查项：P0/P1 必须 fixed，P2/P3 open 只警告。
  *
@@ -249,10 +258,7 @@ function validateSecondReview(projectDir, release, reviewPath, expectedModel) {
       `second review model ${review.reviewer?.model || "(none)"} does not match ${expectedModel}`,
     );
   }
-  if (
-    review.reviewer?.agent === "riccon/builder" ||
-    review.reviewer?.agent === "riccon/lead"
-  ) {
+  if (isImplementationRole(review.reviewer?.agent)) {
     errors.push(
       `second review reviewer ${review.reviewer.agent} cannot be the implementing role`,
     );
@@ -963,9 +969,7 @@ export function checkRelease(projectDir, options = {}) {
       !releaseReview.data.reviewer.agent ||
       !releaseReview.data.reviewer.session ||
       !releaseReview.data.reviewer.model ||
-      ["riccon/builder", "riccon/lead"].includes(
-        releaseReview.data.reviewer.agent,
-      )
+      isImplementationRole(releaseReview.data.reviewer.agent)
     ) {
       add(
         "release_review_independence",

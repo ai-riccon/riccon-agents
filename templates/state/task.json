@@ -3,7 +3,7 @@
   "id": "TASK-0001",
   "module_id": "M01",
   "title": "Implement the critical journey",
-  "owner": "riccon/builder",
+  "owner": "riccon/builder-b2",
   "status": "planned",
   "write_scope": [
     "src/**",

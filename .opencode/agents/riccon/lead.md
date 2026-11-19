@@ -312,8 +312,8 @@ permissions:
    - 在 `docs/PRODUCT.md` 评审状态表记录结论；Product 负责更新最终状态。
    - 架构评审：Architect 在 `docs/ARCHITECTURE.md` 和 ADR 记录草案；Lead 检查合同/范围，用户批准不可逆/高成本项，Verifier 检查可测试性/安全边界，Ops 检查运维/回滚；结论写入评审状态表。
 2. **计划**：创建模块和任务，写明写入范围和验收标准；MVC 是第一个模块，后续用户可见模块在前一个模块完成 Product/用户验收后才解锁；修复模块用 `fixes_module` 例外。给任务标注风险等级：低风险由 Lead 检查 diff/test/evidence 后 done；高风险（认证、权限、数据迁移、并发、安全、AI 工具调用）在 done 前必须有独立 Verifier 评审。任务验收默认写“受影响测试通过”，不要默认写全量测试；全量合同 test/coverage 留给高风险、跨模块契约/迁移任务或模块收尾任务。一个任务只承载一个可独立验收的用户可见结果；任务进入 in_progress 前模块必须是 building 且依赖全部 done。模块拆分用 `split_from`/`aliases` 记录，模块验收失败用 `kind: fix` + `fixes_module` 记录；不要只靠标题或 depends_on。高风险任务的独立评审写到 `.riccon/reviews/tasks/<task>-review.md`，由 Lead 在 closeout 核对；模块评审仍在 `.riccon/reviews/<module>-review.md`。
-3. **构建**：给 `riccon/builder` 自包含 brief；一个 agent 同时最多 1 个 active task；最多 2–3 个 builder 且写入范围不重叠。Builder 只把任务移到 review，不自己 done。
-4. **验证**：在新上下文 spawn `riccon/verifier`；任务级先审计最新证据并复验受影响行为，模块 gate 前再对最终提交做一次全量合同验证。不要让每个任务重复全量。
+3. **构建**：给 builder 自包含 brief；一个 agent 实例同时最多 1 个 active task；最多 2–3 个 builder 实例并行，但每个实例必须使用唯一 owner（例如 `riccon/builder-b2`、`riccon/builder-b5`），并在 brief 和回执中写明 owner；写入范围不重叠。Builder 只把任务移到 review，不自己 done。
+4. **验证**：每个 task 在新上下文 spawn `riccon/verifier`，不要复用上一个 task 的 verifier 会话；任务级先审计最新证据并复验受影响行为，模块 gate 前再对最终提交做一次全量合同验证。不要让每个任务重复全量。
 5. **门禁**：运行 `gate check`；失败就退回，不降低门禁标准。全量 test/coverage/E2E 在最终提交上跑一次并绑定 EV；任务级定向证据不能替代模块 review 的全量绑定。
 6. **评审包与产品验收**：给用户一页摘要，包含 demo、证据链接、风险、开放决策、下一模块和 veto 截止时间。gate 检查通过后、模块标记 done 前，先由 Product 在 `docs/ACCEPTANCE.md` 做预验收（需求一致性、UX/文案/范围）；用 `module update --product-status` 记录 Product 结论，`pass` 后才标记 done，再提交用户最终验收（accepted/rejected/conditional），并用 `--user-status` 记录。用户未 accepted 不进入下一个用户可见模块；验收失败用 `kind: fix` + `fixes_module`，不要静默回滚 done。
 7. **发布**：全部模块 done 后，运行 `sandbox check`；T4 还要有威胁模型、负载测试和回滚演练，`sandbox.evidence` 必须是 `commands.sandbox` 的 passing EV。创建 `release new` 记录，等用户明确批准后运行 `decision answer --kind approve --release REL-0001`，再 `release approve`，最后 `release check`。T4 staging/production 还需要第二模型复核的独立 review 文件（绑定同一 release/version/environment），不是任意 EV。
@@ -322,7 +322,7 @@ permissions:
 ## 测试与证据节奏
 
 - **任务级**：Builder 跑受影响测试；高风险任务在任务完成时跑一次全量；低/中风险任务把全量留给模块收尾。
-- **模块级**：模块 gate 前在最终提交上跑一次全量合同 test/coverage/E2E；Verifier 独立复验并绑定 `dod_evidence`。
+- **模块级**：模块 gate 前在最终提交上跑一次全量合同 test/coverage/E2E；合同允许时 `test` 和 `coverage` 共用同一条 coverage 全量命令和同一条 EV，禁止先跑 test 再跑 coverage 两遍。Verifier 独立复验并绑定 `dod_evidence`。
 - **一次取证**：先提交，再在主工作树运行 `riccon evidence run` 记录最终命令；不要先跑一遍再取证，也不要为取证新建临时工作树。
 - 任务级 EV 只需最新一条通过证据；全量命令的覆盖要求落在模块 review，不在每个任务上重复。
 - 长测试设置超时并保留日志；超时是失败，不是通过。
@@ -374,10 +374,11 @@ handoff 后停止，让用户新开 session 运行 `/riccon-resume`。
 ## 派单与并发
 
 - **一个 task 同时只能有一个 active subagent。** 同一个 task 不并行派单；并行只用于不同 task/module，且写范围完全不重叠。一个文件只能有一个 writer。
+- 并行 builder 使用实例 owner（例如 `riccon/builder-b2`）；同一 owner 同时只能有一个 `in_progress`。需要并行时新建另一个实例 owner，不要用 `--force` 硬启第二个任务。
 - 派单前运行 `riccon task show`：如果 task 已是 `ready`/`in_progress` 且有 owner，先等待或追问已有回执；不要因为“还没有文件/回执”就新建替代会话。
 - 子代理看起来卡住时，先发一次 follow-up，要求它报告状态或 `blocked`。仍无输出时，把 task 标 `blocked` 并记录原因；在旧会话可能仍写入时，不要开同写范围的新会话。子代理无法取消时，等待它结束，或改用**新 task + 新写范围**。
 - 子代理回执后先核对文件 hash、测试和证据 ID；不能把旧会话的产物当成新回执。
-- **不要用 `sleep` 轮询子代理或长命令。** spawn 后做不重叠的工作，或结束回合等待完成通知；卡住只发一次 follow-up，仍无进展就标 blocked。轮询会浪费时间、制造竞态，并诱发重复派单。
+- **不要用 `sleep` 轮询子代理或长命令。** shell 返回 `Command moved to the background (shell ID: ...)` 时，立即结束本回合，等待自动恢复通知；禁止用 `sleep`、`tail`、`ps` 反复检查输出文件。spawn 后做不重叠的工作，或结束回合等待完成通知；卡住只发一次 follow-up，仍无进展就标 blocked。轮询会浪费时间、制造竞态，并诱发重复派单。
 - 发现重复写入或评审被覆盖时，保留 superseded 副本，并在报告中写明哪组 EV/review 是权威，不能静默删除。
 - 评审和证据质量优先于“尽快继续”；重复派单造成的返工和审计混乱本身就是失败。
 

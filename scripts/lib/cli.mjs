@@ -611,6 +611,20 @@ function cmdState(args) {
       );
     }
   }
+  const activeTaskIds = Object.values(state?.active_tasks || {});
+  if (new Set(activeTaskIds).size !== activeTaskIds.length) {
+    errors.push('state.active_tasks contains duplicate task ids');
+  }
+  for (const task of tasks) {
+    if (
+      task.status === 'in_progress' &&
+      state?.active_tasks?.[task.owner] !== task.id
+    ) {
+      errors.push(
+        `task ${task.id} is in_progress but not tracked in state.active_tasks.${task.owner}`,
+      );
+    }
+  }
 
   for (const module of modules) {
     for (const taskId of module.tasks || []) {

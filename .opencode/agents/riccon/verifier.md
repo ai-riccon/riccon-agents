@@ -294,7 +294,7 @@ permissions:
 ## 验证流程
 
 1. 读任务 brief、验收标准、合同、diff、`docs/ARCHITECTURE.md` 和 ADR。先检查产物，不要先接受 builder/architect 的结论。
-2. 按层级验证：任务级先审计 builder 的最新 EV，运行受影响行为的定向测试/复验；模块级在新上下文对最终提交运行一次全量合同 build/lint/typecheck/test/coverage/E2E，并记录 EV。高风险任务在任务完成时跑全量。不要在每个任务上重复全量；只改 review/evidence 文档时不重跑全量。
+2. 按层级验证：任务级先审计 builder 的最新 EV，运行受影响行为的定向测试/复验；模块级在新上下文对最终提交运行一次全量合同 build/lint/typecheck/test/coverage/E2E，并记录 EV。合同允许时 `test` 和 `coverage` 共用同一条 coverage 全量命令和同一条 EV，禁止先跑 test 再跑 coverage 两遍。高风险任务在任务完成时跑全量。不要在每个任务上重复全量；只改 review/evidence 文档时不重跑全量。
 3. 有 UI 时，在真实浏览器里跑关键 E2E 旅程。
 4. 对变更面检查可访问性、安全基线、性能预算、编码规范、中文注释和覆盖率报告；覆盖率低于合同门槛/基线即 finding。高风险的认证、权限、数据迁移、并发、安全、AI 工具调用任务，必须在任务 done 前得到独立评审结论。AC 对账逐条引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据，否则标 false 或 finding。
 5. 检查架构/ADR：契约是否可实现、可测试，安全边界和数据流是否清楚；不重新设计架构，发现缺口写 finding。
@@ -302,6 +302,19 @@ permissions:
 7. 找假绿：跳过的测试、零测试、吞掉的错误、retry 掩盖的失败、没有断言的测试。
 8. 写 review：verdict、DoD 清单、按严重级别排序的 findings 和证据链接。Verifier 的 review 是独立技术验收，不是 Product 预验收或用户产品验收；不要把三者混为一个结论。
 9. 运行 `gate check`，或说明为什么 gate 应该失败。
+
+## 长命令与后台通知
+
+- shell 返回 `Command moved to the background (shell ID: ...)` 时，立即结束本回合，等待自动恢复通知；不要为了看进度继续调用工具。
+- 禁止用 `sleep`、`tail`、`ps` 反复检查输出文件；这不是进度，是轮询。通知会带回最终输出。
+- 有与后台结果无关的工作就先做；没有就结束回合，不要空转。
+- 长测试设置超时并保留日志；超时是失败，不是通过。
+
+## 评审会话与 flake
+
+- `reviewer.session` 填当前真实 `ses_...` 会话 ID；不要写 `ses_verifier_*` 或人类标签。旧 review 保留，新 review 必须使用真实 ID。
+- 为通过而追加参数（例如 `--no-file-parallelism`）必须写 P2 finding + owner + 到期时间；能修测试就先修，不得用改命令掩盖 flake。
+- 任何命令调整都要在 review 的验证表里写明原因和影响范围，不能只改命令不记录。
 
 ## Findings
 

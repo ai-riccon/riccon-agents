@@ -202,6 +202,30 @@ test('state validation checks active_tasks ownership and status', (t) => {
   assert.match(fail.json.errors.join(' '), /unknown task TASK-9999/);
 });
 
+test('state validation rejects in_progress task missing from active_tasks', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  for (const status of ['ready', 'in_progress']) {
+    assert.equal(
+      run(['task', 'update', 'TASK-0001', '--status', status, '--project', dir]).code,
+      0,
+    );
+  }
+  const stateFile = join(dir, '.riccon', 'state.json');
+  const state = readJson(stateFile);
+  delete state.active_tasks['riccon/builder'];
+  writeJson(stateFile, state);
+
+  const fail = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(fail.code, 1);
+  assert.match(
+    fail.json.errors.join(' '),
+    /TASK-0001 is in_progress but not tracked in state.active_tasks/,
+  );
+});
+
 test('state validation catches a dangling evidence reference', (t) => {
   const dir = tempDir();
   t.after(() => cleanup(dir));

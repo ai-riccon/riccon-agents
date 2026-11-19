@@ -647,9 +647,9 @@ export function updateTask(projectDir, taskId, input) {
     task.status === 'in_progress'
   ) {
     const occupied = state.active_tasks?.[input.owner];
-    if (occupied && occupied !== taskId && !input.force) {
+    if (occupied && occupied !== taskId) {
       fail(
-        `owner ${input.owner} already has active task ${occupied}; finish it or pass --force`,
+        `owner ${input.owner} already has active task ${occupied}; finish it, or for parallel builder instances use a unique owner such as riccon/builder-<slug>`,
         { code: 'ERR_ACTIVE_TASK' },
       );
     }
@@ -676,9 +676,9 @@ export function updateTask(projectDir, taskId, input) {
       }
       const owner = input.owner || task.owner;
       const occupied = state.active_tasks?.[owner];
-      if (occupied && occupied !== taskId && !input.force) {
+      if (occupied && occupied !== taskId) {
         fail(
-          `owner ${owner} already has active task ${occupied}; finish it or pass --force`,
+          `owner ${owner} already has active task ${occupied}; finish it, or for parallel builder instances use a unique owner such as riccon/builder-<slug>`,
           { code: 'ERR_ACTIVE_TASK' },
         );
       }

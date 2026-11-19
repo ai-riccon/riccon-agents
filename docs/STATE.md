@@ -74,7 +74,7 @@ planned → ready → in_progress → review → done
 
 任务创建时如果 `write_scope` 超过 8 项或 acceptance 达到 6 项，CLI 会提示拆分（`warnings` 字段）；这是粒度提示，不是硬限制。拆分按“一个可独立验收的用户可见结果”判断，不要只看数量；多个页面/入口/用户动作应拆成多个任务。任务进入 `in_progress` 前，模块必须是 `building`，且模块依赖全部 done。
 
-任务第一次进入 `in_progress` 时记录 `baseline_commit`，之后 review/blocked 再回到 in_progress 不会重置 baseline；同时按 owner 写入 `state.active_tasks`；同一 owner 已有另一个 in-progress 任务时拒绝，活跃任务改 owner 也会检查目标 owner 是否被占用，除非显式 `--force`。进入 `review`/`done` 时，内核用 git 比较 baseline 以来的 tracked/untracked 变更；`write_scope` 之外的文件会导致失败（`.riccon/`、`.codegraph/`、`node_modules/` 除外）。done 任务必须有可解析、且是 HEAD 祖先的 `end_commit`；无 git 却记录 commit、done 缺 `end_commit`、无效/倒退 commit 都 fail-closed。并行任务可用 `task update --baseline-commit SHA --end-commit SHA` 显式设置范围：commit 必须存在且是 HEAD 祖先，baseline 必须是 end 的祖先；`--end-commit` 只允许 review/done。module gate 在 `--require-scope` 下还会检查“每个 done 任务 end_commit 之后提交的文件是否落在全项目任一任务的 write_scope 内”，因此 end_commit 之后的已提交越界改动也会失败。没有 baseline 的旧任务在普通 gate 产生 `task-scope-unverified` warning，在 `--require-scope` 下失败。
+任务第一次进入 `in_progress` 时记录 `baseline_commit`，之后 review/blocked 再回到 in_progress 不会重置 baseline；同时按 owner 写入 `state.active_tasks`；同一 owner 已有另一个 in-progress 任务时拒绝，`--force` 不绕过这个冲突。并行 builder 使用实例 owner（如 `riccon/builder-b2`），同一 owner 同时只能有一个 in_progress。进入 `review`/`done` 时，内核用 git 比较 baseline 以来的 tracked/untracked 变更；`write_scope` 之外的文件会导致失败（`.riccon/`、`.codegraph/`、`node_modules/` 除外）。done 任务必须有可解析、且是 HEAD 祖先的 `end_commit`；无 git 却记录 commit、done 缺 `end_commit`、无效/倒退 commit 都 fail-closed。并行任务可用 `task update --baseline-commit SHA --end-commit SHA` 显式设置范围：commit 必须存在且是 HEAD 祖先，baseline 必须是 end 的祖先；`--end-commit` 只允许 review/done。module gate 在 `--require-scope` 下还会检查“每个 done 任务 end_commit 之后提交的文件是否落在全项目任一任务的 write_scope 内”，因此 end_commit 之后的已提交越界改动也会失败。没有 baseline 的旧任务在普通 gate 产生 `task-scope-unverified` warning，在 `--require-scope` 下失败。
 
 任务评审分级：
 
@@ -91,7 +91,7 @@ planned → ready → in_progress → review → done
 
 并行任务规则：
 
-- 同一 owner 同时只能有一个 `in_progress` 任务，除非显式 `--force`；`--force` 只解决占位，不改变审阅责任。
+- 同一 owner 同时只能有一个 `in_progress` 任务；`--force` 不绕过这个冲突。需要并行时，为每个 builder 实例使用唯一 owner（例如 `riccon/builder-b2`），或等待当前任务进入 review。
 - 同一模块允许多个不同 owner 的并行任务，但每个任务必须声明不重叠的 `write_scope`；重叠时由 Lead 在启动前拆范围，内核不会自动合并两个任务的归属。
 - 项目级 scope 校验使用**全项目所有任务 write_scope 的并集**做路径归属。并集只能回答“这个文件路径被某个任务声明过”，不能证明“这次改动由该任务作者完成”。
 - 并行任务结束后，Verifier 必须人工审阅 `git diff baseline..end` 的实际内容；不能仅凭 gate 的 union 结果判定 authorship。发现 scope 外或跨任务改动时，先拆任务或调整 baseline/end，再重新 gate。
@@ -113,13 +113,13 @@ planned → ready → in_progress → review → done
 
 ### 评审
 
-`reviews/M01-review.md` front matter：`review_id`、`module_id`、`verifier`、`reviewer`（`agent`、`session`、`model`、`independent`）、`verdict`（`pass|fail|blocked`）、`dod` 布尔值、`dod_evidence`（DoD key → EV ID 或数组）、`findings`（`P0`–`P3`，状态 `open|fixed|accepted`）、`evidence`、`reviewed_evidence`、`created_at`。
+`reviews/M01-review.md` front matter：`review_id`、`module_id`、`verifier`、`reviewer`（`agent`、`session`、`model`、`independent`）、`verdict`（`pass|fail|blocked`）、`dod` 布尔值、`dod_evidence`（DoD key → EV ID 或数组）、`findings`（`P0`–`P3`，状态 `open|fixed|accepted`）、`evidence`、`reviewed_evidence`、`created_at`。`reviewer.session` 填当前真实 `ses_...` 会话 ID；旧 review 的合成标签只产生 warning，新 review 必须使用真实 ID。
 
 模块评审固定写在 `.riccon/reviews/<module>-review.md`，由 `review.schema.json` 校验，只有它能参与模块 gate。任务级/架构级独立评审写在 `.riccon/reviews/tasks/<task>-review.md`，由 `task-review.schema.json` 校验；它不进入模块 gate，由 Lead 在任务 closeout 时核对，并在模块评审中引用。`state validate` 会校验两类评审；顶层出现 `task_id` 的评审会提示迁移到 `reviews/tasks/`。
 
 Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/accepted 的 P0/P1。Review 还必须绑定当前 module，`reviewed_evidence` 覆盖每个任务的最新证据，`created_at` 晚于被评审证据，且 `reviewer.independent: true`。
 
-`quality.evidence_binding: strict` 时，每个为 true 的 `acceptance/build/tests/e2e/coverage/docs` 必须有 `dod_evidence` 绑定；绑定的 EV 必须属于本模块、`manual: false`、`exit_code: 0`、哈希校验通过且列入 `reviewed_evidence`。`build/tests/e2e/coverage` 的 EV 命令还必须覆盖合同对应命令。空命令、`not-implemented`、`true`/`echo`/`sleep`/`|| true` 等占位或 no-op 会让 gate 失败；未加引号的管道默认失败（没有 pipefail 时退出码来自最后一个命令）；`||` 只允许 `exit 非零`，`;`/换行后接 `echo`、`true`、`cat`、`tee`、`sleep`、`exit 0` 失败；后台 `&` 失败。`&&`、`|| exit 1`、`for ... || exit 1` 和带引号的 `bash -o pipefail -c '...'` 保留。`review` 和 `evidence` 两项由结构检查本身覆盖，不需要绑定。`quality.evidence_binding: legacy`（旧合同默认）缺少 `dod_evidence` 只产生 warning；一旦提供仍按严格规则校验。`reviewer.agent` 可以是 `riccon/verifier` 或会话级的 verifier 身份；它不能是同一模块中实现类任务的 owner（`riccon/verifier` 自己的验证类任务不触发冲突）。Release review 还要绑定 `release_id`/`version`/`environment`，并覆盖 release 的全部 evidence。
+`quality.evidence_binding: strict` 时，每个为 true 的 `acceptance/build/tests/e2e/coverage/docs` 必须有 `dod_evidence` 绑定；绑定的 EV 必须属于本模块、`manual: false`、`exit_code: 0`、哈希校验通过且列入 `reviewed_evidence`。`build/tests/e2e/coverage` 的 EV 命令还必须覆盖合同对应命令。合同允许时 `tests` 和 `coverage` 绑定同一条 coverage 全量 EV，不要为 coverage 再跑一遍全量。空命令、`not-implemented`、`true`/`echo`/`sleep`/`|| true` 等占位或 no-op 会让 gate 失败；未加引号的管道默认失败（没有 pipefail 时退出码来自最后一个命令）；`||` 只允许 `exit 非零`，`;`/换行后接 `echo`、`true`、`cat`、`tee`、`sleep`、`exit 0` 失败；后台 `&` 失败。`&&`、`|| exit 1`、`for ... || exit 1` 和带引号的 `bash -o pipefail -c '...'` 保留。`review` 和 `evidence` 两项由结构检查本身覆盖，不需要绑定。`quality.evidence_binding: legacy`（旧合同默认）缺少 `dod_evidence` 只产生 warning；一旦提供仍按严格规则校验。`reviewer.agent` 可以是 `riccon/verifier` 或会话级的 verifier 身份；它不能是同一模块中实现类任务的 owner（`riccon/verifier` 自己的验证类任务不触发冲突）。Release review 还要绑定 `release_id`/`version`/`environment`，并覆盖 release 的全部 evidence。
 
 `reviewer.agent/session/model` 是记录字段，不是身份凭证；本地内核不能证明 reviewer 与 Builder/Lead 是不同主体。复审仍把“独立 reviewer”列为未完全解决的风险。
 

@@ -5,8 +5,9 @@ review_id: REV-M01-001
 module_id: M01
 verifier: riccon/verifier
 reviewer:
+  # session 必须是当前真实 OpenCode 会话 ID（ses_...）；不要写 ses_verifier_* 或人类标签。
   agent: riccon/verifier
-  session: session-id
+  session: ses_xxx
   model: opencode-go/deepseek-v4.1-flash#max
   independent: true
 verdict: pass

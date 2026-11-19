@@ -1096,16 +1096,34 @@ test("gate rejects a reviewer that owns a task in the module", (t) => {
   t.after(() => cleanup(dir));
   assert.equal(initProject(dir).code, 0);
   prepareModule(dir);
-  writeReview(dir, { reviewerAgent: "riccon/builder" });
 
-  const result = runJson([
-    "gate",
-    "check",
-    "--module",
-    "M01",
-    "--project",
-    dir,
-  ]);
-  assert.equal(result.code, 1);
-  assert.match(result.json.errors.join(" "), /owns a task/);
+  for (const reviewerAgent of ["riccon/builder", "riccon/builder-b2"]) {
+    writeReview(dir, { reviewerAgent });
+    const result = runJson([
+      "gate",
+      "check",
+      "--module",
+      "M01",
+      "--project",
+      dir,
+    ]);
+    assert.equal(result.code, 1);
+    assert.match(result.json.errors.join(" "), /owns a task/);
+  }
+});
+
+test("gate warns when reviewer.session is not a real session id", (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  prepareModule(dir);
+  writeReview(dir, { reviewerSession: "ses_verifier_M13_TASK-0052_20261119" });
+
+  const result = runJson(["gate", "check", "--module", "M01", "--project", dir]);
+  assert.equal(result.code, 0, result.json?.errors?.join("; "));
+  assert.ok(
+    result.json.warnings.some((warning) =>
+      /reviewer\.session .* is not a real ses_ session id/.test(warning),
+    ),
+  );
 });

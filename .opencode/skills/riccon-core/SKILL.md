@@ -32,11 +32,11 @@ description: "所有 Riccon agent 的共享协作契约：角色、项目合同�
 ### 派单去重
 
 - 一个 task 同时只能有一个 active subagent；同一个 task 不并行派单。
-- 并行只用于不同 task/module，且写范围完全不重叠；一个文件只能有一个 writer。
+- 并行只用于不同 task/module，且写范围完全不重叠；一个文件只能有一个 writer。并行 builder 使用实例 owner（例如 `riccon/builder-b2`），同一 owner 同时只能有一个 `in_progress`。
 - 派单前先看 task 状态和 owner；已 `ready`/`in_progress` 时先等回执，不因暂时没有文件就新建替代会话。
 - 子代理卡住：先 follow-up 一次要求状态/blocked；仍无输出则标 blocked，等待旧会话结束或改用新 task + 新写范围。不要开同写范围的新会话。
 - 回执后核对 hash、测试和 EV ID；旧会话产物不能冒充新回执。
-- 不要用 `sleep` 轮询子代理或长命令；spawn 后做不重叠工作或结束回合，依赖完成通知。卡住只 follow-up 一次，然后标 blocked。
+- 不要用 `sleep` 轮询子代理或长命令；spawn 后做不重叠工作或结束回合，依赖完成通知。shell 返回 `Command moved to the background (shell ID: ...)` 时立即结束回合等通知；禁止 `sleep`/`tail`/`ps` 反复读输出。卡住只 follow-up 一次，然后标 blocked。
 - 重复写入时保留 superseded 副本，并写明权威 EV/review。
 
 ## 3. 项目合同

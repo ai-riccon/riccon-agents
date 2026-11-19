@@ -36,6 +36,7 @@ repo_map:
   infra: ""
   contracts: ""
 commands:
+  # test 与 coverage 建议使用同一条 coverage 全量命令；模块 gate 只跑一次，不要重复全量。
   install: ""
   build: ""
   lint: ""
@@ -132,8 +133,8 @@ budget:
 以下规则即使不读详细文档也必须遵守；详细说明见 `docs/COLLABORATION.md`。
 
 - 合同是技术栈、命令、工具和约束的唯一事实源；合同里没有的目录、命令或工具不要假设。
-- 每个任务都有 `write_scope` 和验收标准；不要静默扩大任何一项。
-- 先提交，再 `riccon evidence run`；strict 下 dirty 证据、空命令、占位命令和掩盖失败的写法不能让 gate 通过。
+- 每个任务都有 `write_scope` 和验收标准；不要静默扩大任何一项。并行 builder 使用实例 owner（例如 `riccon/builder-b2`）；同一 owner 同时只能有一个 `in_progress`，不要用 `--force` 绕过。
+- 先提交，再 `riccon evidence run`；strict 下 dirty 证据、空命令、占位命令和掩盖失败的写法不能让 gate 通过。模块 gate 的 `test` 和 `coverage` 优先共用同一条 coverage 全量 EV；长命令移到后台后结束回合等通知，禁止 `sleep`/`tail`/`ps` 轮询。
 - Product 的 brief/AC/non-goals 必须经过 Lead、用户、Architect、Verifier 的评审链；未批准不进入模块实现。
 - Architect 的架构/ADR 必须经过 Lead、用户（不可逆项）、Verifier、Ops 评审；未评审的 ADR 保持 `proposed`。
 - Builder 只把任务移到 `review`，不自己 `done`；高风险任务在 done 前必须有独立 Verifier 评审。

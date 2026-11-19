@@ -434,6 +434,24 @@ export function runDoctor(teamRoot) {
     }
   }
 
+  // 并行 builder 的 owner 约定：lead prompt 和任务模板必须能表达实例级 owner。
+  const leadAgent = join(agentDir, 'lead.md');
+  if (exists(leadAgent) && !/(唯一 owner|builder-<)/.test(readText(leadAgent))) {
+    add(
+      'owner-instance-convention',
+      'warn',
+      'lead.md should document unique owner ids for parallel builder instances (e.g. riccon/builder-b2)',
+    );
+  }
+  const templateTask = join(templatesDir, 'state', 'task.json');
+  if (exists(templateTask) && !readText(templateTask).includes('riccon/builder-')) {
+    add(
+      'template-task-owner',
+      'warn',
+      'templates/state/task.json should demonstrate an instance owner (riccon/builder-*)',
+    );
+  }
+
   // 项目模板合同区块
   if (!exists(templateAgents)) {
     add('template-project', 'fail', 'templates/project/AGENTS.md is missing');

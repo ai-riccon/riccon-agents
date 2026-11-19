@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   cleanup,
   initProject,
+  readJson,
   run,
   runJson,
   setModuleStatus,
@@ -378,7 +379,7 @@ test('module review_pending requires all tasks done', (t) => {
   assert.match(blocked.stderr, /tasks not done/);
 });
 
-test('one owner cannot have two in-progress tasks without force', (t) => {
+test('one owner cannot have two in-progress tasks', (t) => {
   const dir = tempDir();
   t.after(() => cleanup(dir));
   assert.equal(initProject(dir).code, 0);
@@ -439,7 +440,66 @@ test('one owner cannot have two in-progress tasks without force', (t) => {
     '--project',
     dir,
   ]);
-  assert.equal(forced.code, 0, forced.stderr);
+  assert.equal(forced.code, 1);
+  assert.match(forced.stderr, /already has active task TASK-0001/);
+});
+
+test('parallel builder instances with distinct owners can be in_progress', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  assert.equal(
+    run(['module', 'new', '--title', 'MVC', '--kind', 'mvc', '--project', dir]).code,
+    0,
+  );
+  const first = runJson([
+    'task',
+    'new',
+    '--module',
+    'M01',
+    '--title',
+    'First builder',
+    '--owner',
+    'riccon/builder-b2',
+    '--write-scope',
+    'src/a/**',
+    '--project',
+    dir,
+  ]);
+  const second = runJson([
+    'task',
+    'new',
+    '--module',
+    'M01',
+    '--title',
+    'Second builder',
+    '--owner',
+    'riccon/builder-b5',
+    '--write-scope',
+    'src/b/**',
+    '--project',
+    dir,
+  ]);
+  assert.equal(first.code, 0, first.stderr);
+  assert.equal(second.code, 0, second.stderr);
+  assert.equal(
+    run(['module', 'update', 'M01', '--status', 'building', '--project', dir]).code,
+    0,
+  );
+  for (const taskId of [first.json.task.id, second.json.task.id]) {
+    assert.equal(
+      run(['task', 'update', taskId, '--status', 'ready', '--project', dir]).code,
+      0,
+    );
+    assert.equal(
+      run(['task', 'update', taskId, '--status', 'in_progress', '--project', dir]).code,
+      0,
+    );
+  }
+  const state = readJson(join(dir, '.riccon', 'state.json'));
+  assert.equal(state.active_tasks['riccon/builder-b2'], first.json.task.id);
+  assert.equal(state.active_tasks['riccon/builder-b5'], second.json.task.id);
+  assert.equal(run(['state', 'validate', '--project', dir]).code, 0);
 });
 
 test('an active task cannot be reassigned to an occupied owner', (t) => {
@@ -503,7 +563,8 @@ test('an active task cannot be reassigned to an occupied owner', (t) => {
     '--project',
     dir,
   ]);
-  assert.equal(forced.code, 0, forced.stderr);
+  assert.equal(forced.code, 1);
+  assert.match(forced.stderr, /already has active task TASK-0001/);
 });
 
 test('task review rejects changes outside write_scope', (t) => {
