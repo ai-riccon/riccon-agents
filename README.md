@@ -3,7 +3,7 @@
 **受监督的 AI 智能体软件交付团队。**
 用合同、状态、证据、独立评审和门禁，把 OpenCode 中的多个 agent 组织成一条可审计、可恢复、可交接的软件交付流水线。
 
-当前版本：`0.1.8`。这是**受监督原型**，不是“全自主软件公司”，生产发布仍需独立批准。
+当前版本：`0.1.11`。这是**受监督原型**，不是“全自主软件公司”，生产发布仍需独立批准。
 
 ---
 
@@ -45,7 +45,7 @@ Riccon 把这些变成可检查的文件和状态：
 合同 → 模块 → 任务 → 证据 → 独立评审 → gate → handoff → 发布门禁
 ```
 
-目标项目的 `AGENTS.md` 是技术栈、命令、DoD、权限和风险等级的唯一事实源；`.riccon/` 是执行状态的唯一事实源；聊天历史不是记忆。
+目标项目的 `AGENTS.md` 是技术栈、命令、DoD、决策所有权和风险等级的唯一事实源；工具权限由团队 `templates/agents/permissions.yml` 管理；`.riccon/` 是执行状态的唯一事实源；聊天历史不是记忆。
 
 ---
 
@@ -171,7 +171,7 @@ riccon evidence add --task TASK-0001 --command "npm test" --output test.log --ex
 
 严格模式（新项目默认）下：
 
-- review 的 `dod_evidence` 必须把 `acceptance/build/tests/e2e/coverage/docs` 绑定到真实、非 manual、exit 0、已列入 `reviewed_evidence` 的 EV；
+- **模块 review** 的 `dod_evidence` 必须把 `acceptance/build/tests/e2e/coverage/docs` 绑定到真实、非 manual、exit 0、已列入 `reviewed_evidence` 的 EV；RELEASE 评审用 `reviewed_evidence` 覆盖发布证据，不复用模块 review 的 `dod_evidence` 绑定；
 - `build/tests/e2e/coverage` 的 EV 命令必须覆盖合同对应命令；
 - 先提交再取证；`dirty: true` 的证据会让 gate 失败；
 - 空命令、`not-implemented`、`true`、`echo`、`sleep`、未加引号的管道、`|| true`、`; true`、后台 `&` 等掩盖失败的写法会被拒绝；
@@ -193,9 +193,10 @@ Verifier 必须识别假绿：
 - 模块评审写在 `.riccon/reviews/<module>-review.md`，参与模块 gate。
 - 任务级/架构级评审写在 `.riccon/reviews/tasks/<task>-review.md`，不参与模块 gate，由 Lead 在 closeout 核对。
 - Review 必须绑定当前 module、最新证据、reviewer 元数据和 `independent: true`。
-- `reviewer.session` 应是真实 `ses_...` 会话 ID；旧 review 的合成标签只产生 warning。
-- P0/P1 必须在 gate 通过前修复；P2/P3 需要书面理由接受。
+- `reviewer.session` 应是真实 `ses_...` 会话 ID；0.1.9 起新 review 使用合成标签会让 gate 失败，旧 review 只产生 warning。
+- P0/P1 必须在 gate 通过前修复，gate/release 始终失败；P2/P3 不能保持 `open`，必须 `fixed` 或带 `owner`/`due`/`accepted_reason` 的 `accepted`。0.1.11 之前的旧评审在 `state validate` 中只产生 warning，不追溯失败。
 - 模块评审必须给出 `verdict`、DoD 清单、按严重级别排序的 findings 和证据链接。
+- 0.1.11 起，模块评审用 `reviewed_task_reviews` 列出本模块每个已有 task review 的最新 `review_id`；缺失时新评审不能通过 gate。替换旧模块评审前先归档到 `.riccon/archive/reviews/`，`previous_review` 找不到会让 `state validate` warning。
 
 ### 门禁
 
@@ -207,7 +208,7 @@ Verifier 必须识别假绿：
 - 每个证据的输出存在、hash/字节匹配、属于该任务；
 - review 存在、有效、verdict pass，绑定当前 module，覆盖最新证据且晚于证据，reviewer 独立；
 - 合同 DoD 全部为 true，且 strict 绑定时每项都有真实 passed EV；
-- 没有 open/accepted P0/P1；
+- 没有 open/accepted P0/P1；0.1.11 起新评审不得有 open P2/P3，accepted P2/P3 必须带 owner/due/accepted_reason；
 - 没有被阻塞的开放决策；
 - 墙钟在模块上限内（或 `--allow-overrun`）；
 - `--require-scope` 可把无 baseline 的 scope 检查从 warning 升级为 fail。
@@ -243,7 +244,7 @@ handoff 前必须满足：
 - `next` 非空且不是占位词；
 - `first_read` 路径存在。
 
-0.1.8 起，gate 新鲜度只比较**被 gate 模块**的任务；其他模块的 `planned/ready` 任务不会让 gate 过期。
+0.1.8 起，gate 新鲜度只比较**被 gate 模块**的任务和模块评审；其他模块的任务/评审不会让 gate 过期。
 
 ---
 
@@ -278,7 +279,7 @@ handoff 前必须满足：
 
 - 项目内读/写/执行、MCP 工具、网络访问和 skills 默认 allow。
 - 破坏性、对外副作用、金钱/身份/法律、敏感数据操作前 ask。
-- 编辑合同、`.opencode/**`、`.git/**`，以及写项目外目录前 ask。
+- 编辑合同、`.opencode/**`、`.git/**`、已安装的 Riccon 内核，以及写项目外目录前 ask。
 - 只有 subagent spawn 和直接问用户受角色限制。
 - 数据库和服务的真正安全边界是沙箱/一次性运行时；权限模式不是。
 - 绝不把密钥写进仓库、状态、日志、任务卡、证据、提示词或 handoff。
@@ -298,8 +299,8 @@ handoff 前必须满足：
 - 批准决策已 `answered`、owner 为 `user`、`answer_kind: approve`，绑定同一 `release_id`/`environment`；
 - release evidence 全部存在、属于已知任务、hash 匹配、非 manual、exit 0；
 - 发布产物存在：T4 要求威胁模型、负载测试、回滚演练和 runbook；T1–T3 至少要求回滚演练和 runbook；
-- `RELEASE` 评审 verdict pass，覆盖 release 全部 evidence，reviewer 独立；
-- 没有 open/accepted P0/P1，没有被阻塞的开放决策；
+- `RELEASE` 评审 verdict pass，覆盖 release 全部 evidence，reviewer 独立且使用真实 `ses_...` 会话 ID；模板见 `templates/state/release-review.md`，用 `reviewed_evidence` 覆盖发布证据；
+- 没有 open/accepted P0/P1；0.1.11 起新评审不得有 open P2/P3，accepted P2/P3 必须带 owner/due/accepted_reason；没有被阻塞的开放决策；
 - T4 调用 `sandbox check`，并要求 release evidence 包含 `sandbox.evidence` 指向的 passing EV；
 - T4 staging/production 还需要第二评审文件，绑定同一 release/version/environment，使用不同 model/agent/session。
 
@@ -363,6 +364,8 @@ riccon state validate         # 校验状态、任务、证据和评审引用
 
 ## 主要命令
 
+下列命令中的 `riccon` 指已安装内核的 CLI；如果 `command -v riccon` 为空，使用 `node "$HOME/.config/opencode/riccon/scripts/riccon.mjs"`。
+
 ```bash
 riccon init
 riccon adopt --write
@@ -390,6 +393,7 @@ OpenCode 命令：
 /riccon-decision
 /riccon-resume
 /riccon-release
+/riccon-improve
 ```
 
 ---
@@ -412,7 +416,7 @@ OpenCode 命令：
 └─ archive/              旧状态，不静默删除
 ```
 
-机器状态用 JSON；决策、评审和 handoff 用带 YAML front matter 的 Markdown。任何地方都不要存密钥。
+机器状态用 JSON；决策、发布、评审和 handoff 用带 YAML front matter 的 Markdown。任何地方都不要存密钥。
 
 ---
 
@@ -420,7 +424,7 @@ OpenCode 命令：
 
 ```text
 .opencode/agents/riccon/     Lead、Product、Architect、Builder、Verifier、Ops
-.opencode/commands/           /riccon-start、status、plan、review、decision、resume、release
+.opencode/commands/           /riccon-start、status、plan、review、decision、resume、release、improve
 .opencode/skills/            core、contract、verify、docs
 schemas/                     状态和记录的 JSON schema
 scripts/                     内核、CLI、安装器、adopt、gate、release、sandbox
@@ -443,7 +447,7 @@ agent 定义、命令和 skills 是团队管理的唯一事实源；目标项目
 - **人类保留关键决策**：生产、花钱、破坏性操作和产品范围由用户决定。
 - **技术栈无关**：团队定义不绑定框架、数据库或目录结构。
 - **上下文有预算**：长会话在安全边界交接，不把半截工作留给下一个会话猜。
-- **时间默认北京时间**：`Asia/Shanghai`（UTC+08:00）；内核时间戳、证据、数据库时间字段、日志和 UI 都使用带偏移的时间。
+- **时间默认北京时间**：`Asia/Shanghai`（UTC+08:00）；内核时间戳、证据、日志和 UI 使用带偏移的时间；数据库按合同/ADR 使用带时区类型或显式存储偏移。
 
 ---
 

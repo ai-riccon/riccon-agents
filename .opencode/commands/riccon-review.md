@@ -7,8 +7,11 @@ description: 运行模块验证，收集独立评审，检查门禁并生成一�
 加载 `riccon-core` 和 `riccon-verify`。
 
 1. 确认模块可以验证：所有任务 done 且有证据。
-2. 给 `riccon/verifier` 一个自包含 brief：模块、验收标准、合同、diff、声明的命令和证据路径。
-3. verifier 必须运行声明的命令和关键 E2E 旅程，并写 `.riccon/reviews/<module>-review.md`，包含 verdict、DoD 清单、`dod_evidence` 和 findings；strict 项目不得用自报代替真实 EV。任务级/架构级独立评审写到 `.riccon/reviews/tasks/<task>-review.md`，不参与模块 gate。
+2. 给 `riccon/verifier` 一个自包含 brief：模块、验收标准、合同、diff、声明的命令和证据路径。brief 必须要求先读本模块每个任务的最新 task review，并逐条对账其中的 fixed/accepted/open findings。
+3. verifier 必须运行声明的命令和关键 E2E 旅程，并写 `.riccon/reviews/<module>-review.md`，包含 verdict、DoD 清单、`dod_evidence`、`reviewed_task_reviews` 和 findings；strict 项目不得用自报代替真实 EV。任务级/架构级独立评审写到 `.riccon/reviews/tasks/<task>-review.md`，不参与模块 gate。
+   - pass 时不得保留 open finding：P0/P1 必须 fixed；P2/P3 必须 fixed 或 accepted，accepted 必须写 owner/due/accepted_reason。
+   - accepted finding 影响 AC 时，AC 必须写 `pass (with residual)`，不能写成无残余的 pass。
+   - 替换 `.riccon/reviews/<module>-review.md` 前，先把旧文件归档到 `.riccon/archive/reviews/`，不要覆盖历史。
 4. 运行 `riccon gate check --module <module> --project .`。
 5. gate 失败时：
    - 把 P0/P1 findings 连同可复现案例退回 builder；

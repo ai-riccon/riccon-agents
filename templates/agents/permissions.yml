@@ -12,6 +12,7 @@ base:
   - { action: edit, resource: "*", effect: allow }
   - { action: edit, resource: "AGENTS.md", effect: ask }
   - { action: edit, resource: ".opencode/**", effect: ask }
+  - { action: edit, resource: "$HOME/.config/opencode/riccon/*", effect: ask }
   - { action: edit, resource: ".git/**", effect: ask }
   - { action: edit, resource: ".env", effect: ask }
   - { action: edit, resource: ".env.*", effect: ask }

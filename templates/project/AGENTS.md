@@ -52,9 +52,11 @@ sandbox:
   required: false
   runtime: ""
   network: ""
+  allowlist: []
   mounts: []
   secrets: ""
   limits: {}
+  attestation_terms: []
   evidence: ""
 tools:
   required: []
@@ -93,6 +95,8 @@ coding_standard:
 quality:
   evidence_binding: strict
 definition_of_done:
+  # gate 只检查这里列出的 key；T3/T4 项目应显式补充
+  # security/accessibility/performance/migration 等轨道项。
   module: [acceptance, build, tests, coverage, e2e, review, docs, evidence]
   release: [build, tests, e2e, security, rollback, approval]
 decision_owners:
@@ -143,7 +147,7 @@ budget:
 - 不把密钥写进仓库、`.riccon/`、日志、任务卡、证据、提示词或 handoff。
 - 产品范围、不可逆技术选择、生产发布、花钱和破坏性操作由用户拥有；其余授权给团队。
 - 文档、注释、commit message、决策包、评审包和 handoff 默认中文；代码注释必须中文，标识符、命令、字段名保持英文。
-- 所有时间默认北京时间（`Asia/Shanghai`，UTC+08:00）；数据库和 API/日志/UI 按合同约定使用带偏移时间。
+- 所有时间默认北京时间（`Asia/Shanghai`，UTC+08:00）；API/日志/UI 使用带偏移时间，数据库按合同/ADR 使用带时区类型或显式存储偏移。
 <!-- riccon:team:end -->
 
 ## 项目补充

@@ -44,6 +44,9 @@ permissions:
     resource: .opencode/**
     effect: ask
   - action: edit
+    resource: $HOME/.config/opencode/riccon/*
+    effect: ask
+  - action: edit
     resource: .git/**
     effect: ask
   - action: edit

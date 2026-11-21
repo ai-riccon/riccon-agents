@@ -72,6 +72,62 @@ test('task new creates an id and a module link', (t) => {
   assert.deepEqual(task.write_scope, ['src/**']);
 });
 
+test('task new requires write_scope and acceptance', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  assert.equal(
+    run(['module', 'new', '--title', 'MVC', '--kind', 'mvc', '--project', dir]).code,
+    0,
+  );
+
+  const noScope = run([
+    'task',
+    'new',
+    '--module',
+    'M01',
+    '--title',
+    'Missing scope',
+    '--acceptance',
+    'Works',
+    '--project',
+    dir,
+  ]);
+  assert.equal(noScope.code, 1);
+  assert.match(noScope.stderr, /--write-scope/);
+
+  const noAcceptance = run([
+    'task',
+    'new',
+    '--module',
+    'M01',
+    '--title',
+    'Missing acceptance',
+    '--write-scope',
+    'src/**',
+    '--project',
+    dir,
+  ]);
+  assert.equal(noAcceptance.code, 1);
+  assert.match(noAcceptance.stderr, /--acceptance/);
+
+  const ok = run([
+    'task',
+    'new',
+    '--module',
+    'M01',
+    '--title',
+    'Complete brief',
+    '--write-scope',
+    'src/**',
+    '--acceptance',
+    'Works',
+    '--project',
+    dir,
+  ]);
+  assert.equal(ok.code, 0, ok.stderr);
+});
+
 test('task transitions are enforced', (t) => {
   const dir = tempDir();
   t.after(() => cleanup(dir));
@@ -223,6 +279,10 @@ test('task cannot start before its module is building', (t) => {
     'M01',
     '--title',
     'Build the toy',
+    '--write-scope',
+    'src/**',
+    '--acceptance',
+    'Toy works',
     '--project',
     dir,
   ]);
@@ -395,6 +455,8 @@ test('one owner cannot have two in-progress tasks', (t) => {
     'riccon/builder',
     '--write-scope',
     'src/**',
+    '--acceptance',
+    'Works',
     '--project',
     dir,
   ]);
@@ -463,6 +525,8 @@ test('parallel builder instances with distinct owners can be in_progress', (t) =
     'riccon/builder-b2',
     '--write-scope',
     'src/a/**',
+    '--acceptance',
+    'Works',
     '--project',
     dir,
   ]);
@@ -477,6 +541,8 @@ test('parallel builder instances with distinct owners can be in_progress', (t) =
     'riccon/builder-b5',
     '--write-scope',
     'src/b/**',
+    '--acceptance',
+    'Works',
     '--project',
     dir,
   ]);
@@ -518,6 +584,8 @@ test('an active task cannot be reassigned to an occupied owner', (t) => {
     'riccon/verifier',
     '--write-scope',
     'src/**',
+    '--acceptance',
+    'Works',
     '--project',
     dir,
   ]);
@@ -782,6 +850,8 @@ test('task new warns when write scope or acceptance suggests splitting', (t) => 
     'M01',
     '--title',
     'Too broad',
+    '--acceptance',
+    'Works',
     '--project',
     dir,
     ...scopes,
@@ -811,6 +881,8 @@ test('task new warns at six acceptance items', (t) => {
     'M01',
     '--title',
     'Too many outcomes',
+    '--write-scope',
+    'src/**',
     '--project',
     dir,
     ...acceptance,

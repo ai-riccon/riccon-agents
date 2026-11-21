@@ -26,7 +26,7 @@
 ## 3.5 时间与时区
 
 - 团队默认时区：`Asia/Shanghai`（UTC+08:00），由合同 `project.timezone` 声明。
-- 数据库：使用 `timestamptz` / `timestamp with time zone`，写入带偏移的时间；不要用无时区的 `timestamp` 存业务时间。
+- 数据库：按合同/ADR 使用数据库的带时区类型或显式存储偏移（例如 PostgreSQL `timestamptz`、SQL Server `datetimeoffset`）；不要用无时区的 `timestamp` 存业务时间。
 - API/日志/事件/UI：ISO 8601 带偏移（例如 `2026-11-18T09:30:00+08:00`），不要只发 `YYYY-MM-DD HH:mm:ss`。
 - 仅在存储层必须使用 UTC 时，读写边界和展示层必须转换为北京时间，并写 ADR；不能把 UTC 直接展示给用户。
 - 测试固定时钟时明确时区；禁止依赖运行机器的本地时区。

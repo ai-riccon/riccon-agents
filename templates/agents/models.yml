@@ -8,7 +8,6 @@ architect: opencode-go/deepseek-v4.1-flash#max
 builder: opencode-go/deepseek-v4.1-flash#max
 verifier: opencode-go/deepseek-v4.1-flash#max
 ops: opencode-go/deepseek-v4.1-flash#high
-scan: opencode/deepseek-v4.1-flash-free#high
 
 # 步数上限也属于部署配置；同步脚本会写入 agent frontmatter，doctor 会校验。
 steps:

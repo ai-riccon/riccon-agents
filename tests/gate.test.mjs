@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   addModuleAndTask,
@@ -19,6 +19,17 @@ import {
   writeReview,
   writeTaskReview,
 } from "./helpers.mjs";
+
+function setEvidenceFinishedAt(dir, taskId, iso) {
+  const evidenceDir = join(dir, ".riccon", "evidence", taskId);
+  for (const file of readdirSync(evidenceDir).filter((name) => name.endsWith(".json"))) {
+    const path = join(evidenceDir, file);
+    const data = readJson(path);
+    data.started_at = iso;
+    data.finished_at = iso;
+    writeJson(path, data);
+  }
+}
 
 function prepareModule(dir) {
   const { task } = addModuleAndTask(dir);
@@ -919,13 +930,19 @@ test("gate --require-scope rejects post-end changes when no task declares a writ
     'Verification only',
     '--owner',
     'riccon/verifier',
+    '--write-scope',
+    'src/**',
     '--acceptance',
     'Review only',
     '--project',
     dir,
   ]);
   assert.equal(created.code, 0, created.stderr);
-  const task = created.json.task;
+  const taskPath = join(dir, '.riccon', 'tasks', `${created.json.task.id}.json`);
+  const task = readJson(taskPath);
+  // 模拟历史任务：创建后手工清空 write_scope，验证 gate 的 fail-closed 路径。
+  task.write_scope = [];
+  writeJson(taskPath, task);
   assert.deepEqual(task.write_scope, []);
   assert.equal(
     run(['module', 'update', module.json.module.id, '--status', 'building', '--project', dir])
@@ -1112,12 +1129,16 @@ test("gate rejects a reviewer that owns a task in the module", (t) => {
   }
 });
 
-test("gate warns when reviewer.session is not a real session id", (t) => {
+test("gate warns when a legacy review uses a synthetic session id", (t) => {
   const dir = tempDir();
   t.after(() => cleanup(dir));
   assert.equal(initProject(dir).code, 0);
-  prepareModule(dir);
-  writeReview(dir, { reviewerSession: "ses_verifier_M13_TASK-0052_20261119" });
+  const { task } = prepareModule(dir);
+  setEvidenceFinishedAt(dir, task.id, "2026-11-19T00:00:00+08:00");
+  writeReview(dir, {
+    reviewerSession: "ses_verifier_M13_TASK-0052_20261119",
+    createdAt: "2026-11-19T01:00:00+08:00",
+  });
 
   const result = runJson(["gate", "check", "--module", "M01", "--project", dir]);
   assert.equal(result.code, 0, result.json?.errors?.join("; "));
@@ -1126,4 +1147,72 @@ test("gate warns when reviewer.session is not a real session id", (t) => {
       /reviewer\.session .* is not a real ses_ session id/.test(warning),
     ),
   );
+});
+
+test("gate fails a new review with a synthetic session id", (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  prepareModule(dir);
+  writeReview(dir, {
+    reviewerSession: "ses_verifier_M13_TASK-0052_20261119",
+    createdAt: "2026-11-21T00:00:00+08:00",
+  });
+
+  const result = runJson(["gate", "check", "--module", "M01", "--project", dir]);
+  assert.equal(result.code, 1);
+  assert.match(result.json.errors.join(" "), /must use the actual OpenCode session id/);
+});
+
+test("gate fails a new module review with an open P2", (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  prepareModule(dir);
+  writeReview(dir, {
+    findings: [
+      {
+        id: "F-001",
+        severity: "P2",
+        status: "open",
+        title: "still open",
+      },
+    ],
+    createdAt: "2026-11-23T00:00:00+08:00",
+  });
+
+  const result = runJson(["gate", "check", "--module", "M01", "--project", dir]);
+  assert.equal(result.code, 1);
+  assert.match(
+    result.json.errors.join(" "),
+    /P2 finding F-001 is open; new pass reviews must fix it or mark it accepted/,
+  );
+});
+
+test("gate requires reviewed_task_reviews for a new module review", (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  const { task } = prepareModule(dir);
+  writeTaskReview(dir, {
+    moduleId: "M01",
+    taskId: task.id,
+    reviewId: "REV-TASK-0001-001",
+    createdAt: "2026-11-23T00:00:00+08:00",
+  });
+  writeReview(dir, { createdAt: "2026-11-23T00:00:00+08:00" });
+
+  const fail = runJson(["gate", "check", "--module", "M01", "--project", dir]);
+  assert.equal(fail.code, 1);
+  assert.match(
+    fail.json.errors.join(" "),
+    /does not list latest task review REV-TASK-0001-001/,
+  );
+
+  writeReview(dir, {
+    createdAt: "2026-11-23T00:00:00+08:00",
+    reviewedTaskReviews: ["REV-TASK-0001-001"],
+  });
+  const pass = runJson(["gate", "check", "--module", "M01", "--project", dir]);
+  assert.equal(pass.code, 0, pass.json?.errors?.join("; "));
 });

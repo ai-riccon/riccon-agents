@@ -16,7 +16,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run check
-      - name: Smoke init/gate/handoff
+      - name: Smoke init/contract
         run: |
           tmp="$(mktemp -d)"
           git -C "$tmp" init -q

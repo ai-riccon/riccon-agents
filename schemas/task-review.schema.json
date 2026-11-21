@@ -55,6 +55,9 @@
           "title": { "type": "string" },
           "summary": { "type": "string" },
           "status": { "enum": ["open", "fixed", "accepted"] },
+          "owner": { "type": "string" },
+          "due": { "type": "string" },
+          "accepted_reason": { "type": "string" },
           "evidence": { "type": "string" }
         }
       }
@@ -68,6 +71,8 @@
       "items": { "type": "string", "pattern": "^EV-[0-9]{4,}$" }
     },
     "notes": { "type": "string" },
+    "previous_review": { "type": "string" },
+    "supersedes": { "type": "string" },
     "created_at": { "type": "string" }
   }
 }

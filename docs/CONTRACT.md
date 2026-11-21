@@ -14,7 +14,7 @@ project:
 <!-- riccon:contract:end -->
 ```
 
-它是团队关于技术栈、命令、工具、环境、约束和 DoD 的唯一事实源。
+它是团队关于技术栈、命令、工具、环境、约束和 DoD 的唯一事实源。本文命令中的 `riccon` 指已安装内核的 CLI；如果 `command -v riccon` 为空，使用 `node "$HOME/.config/opencode/riccon/scripts/riccon.mjs"`。
 
 ## 字段
 
@@ -26,7 +26,7 @@ project:
 | `stack` | 语言、框架、运行时、数据库、包管理器、版本；多栈仓库用 `stack.subprojects` 显式列出子项目、命令和状态。 |
 | `repo_map` | 源码、测试、文档、基础设施和契约根。 |
 | `commands` | 安装、构建、lint、类型检查、测试、E2E、代码覆盖率、运行、预览部署、生产部署、沙箱。 |
-| `sandbox` | 是否必需、运行时、网络、挂载、密钥、限制和沙箱证据；T4 的 `evidence` 必须是 `commands.sandbox` 产生的 passing EV。 |
+| `sandbox` | 是否必需、运行时、网络/`allowlist`、挂载、密钥、限制、`attestation_terms` 和沙箱证据；T4 的 `evidence` 必须是 `commands.sandbox` 产生的 passing EV。 |
 | `tools` | 必需/可选工具、MCP 工具、降级策略。 |
 | `environments` | 本地、预览、沙箱、生产。 |
 | `integrations` | 认证、支付、邮件、存储、外部 API。 |
@@ -34,7 +34,7 @@ project:
 | `constraints` | 风格、安全、性能、可访问性、代码覆盖率门槛、许可、合规。 |
 | `coding_standard` | 编码规范路径、owner、注释语言；Architect 在 Builder 开始前创建。 |
 | `quality` | DoD 证据绑定模式：`strict`（默认，新项目）或 `legacy`（存量迁移）。 |
-| `definition_of_done` | 模块和发布检查清单；新模板包含 `coverage`。 |
+| `definition_of_done` | 模块和发布检查清单；gate 只检查这里列出的 key。新模板包含 `coverage`；T3/T4 项目应显式补充 `security`/`accessibility`/`performance`/`migration` 等轨道项。 |
 | `decision_owners` | 产品、UX、架构、生产、花钱、破坏性操作由用户还是团队决定。 |
 | `budget` | token 策略、墙钟策略、成本可见性。 |
 
@@ -48,8 +48,9 @@ project:
 
 `quality.evidence_binding`：
 
-- `strict`：新项目默认。review 必须用 `dod_evidence.<key>` 把 `acceptance/build/tests/e2e/coverage/docs` 指向真实、`manual: false`、`exit_code: 0`、哈希校验通过、已列入 `reviewed_evidence` 的 EV；`build/tests/e2e/coverage` 还要求 EV 命令覆盖对应 `commands.build/test/test_e2e/coverage`。DoD 声称的项没有绑定、命令为空/`not-implemented`/`true`/`echo`/`sleep`/`|| true` 等占位或 no-op，gate 直接失败；未加引号的管道默认失败；`||` 只允许 `exit 非零`，`; true`、`exit 0`、后台 `&` 等掩盖写法也失败。
+- `strict`：新项目默认。**模块 review** 必须用 `dod_evidence.<key>` 把 `acceptance/build/tests/e2e/coverage/docs` 指向真实、`manual: false`、`exit_code: 0`、哈希校验通过、已列入 `reviewed_evidence` 的 EV；`build/tests/e2e/coverage` 还要求 EV 命令覆盖对应 `commands.build/test/test_e2e/coverage`。DoD 声称的项没有绑定、命令为空/`not-implemented`/`true`/`echo`/`sleep`/`|| true` 等占位或 no-op，gate 直接失败；未加引号的管道默认失败；`||` 只允许 `exit 非零`，`; true`、`exit 0`、后台 `&` 等掩盖写法也失败。
 - `legacy`：存量项目迁移窗口。缺少 `dod_evidence` 只产生 warning；一旦提供，仍按上述规则校验。旧合同没有 `quality` 时按 legacy 处理。
+- RELEASE 评审使用 `templates/state/release-review.md`，用 `reviewed_evidence` 覆盖发布证据；release DoD 是发布清单布尔值，不复用模块 review 的 `dod_evidence` 绑定。
 - 新项目用 `riccon init --evidence-binding strict`；`riccon init` 默认 strict，测试/迁移可显式传 `legacy`。`riccon adopt` 生成 `legacy`，存量项目补上真实命令和 `dod_evidence` 后再切 strict。
 
 JSON Schema 见 [`schemas/contract.schema.json`](../schemas/contract.schema.json)。

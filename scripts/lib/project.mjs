@@ -256,6 +256,30 @@ export function readTaskReviews(projectDir) {
   );
 }
 
+/**
+ * 读取归档评审的 review_id，用于校验 previous_review/supersedes 链。
+ *
+ * 归档目录是可选的；坏文件只跳过，不影响当前状态校验。
+ *
+ * @param {string} projectDir
+ * @returns {string[]}
+ */
+export function readArchivedReviewIds(projectDir) {
+  const dir = join(projectPaths(projectDir).archive, 'reviews');
+  const ids = [];
+  for (const file of listFilesRecursive(dir, (name) => name.endsWith('.md'))) {
+    try {
+      const parsed = parseFrontmatter(readText(file));
+      if (parsed.hasFrontmatter && parsed.data?.review_id) {
+        ids.push(String(parsed.data.review_id));
+      }
+    } catch {
+      // 归档目录中的坏文件不阻塞当前状态校验。
+    }
+  }
+  return ids;
+}
+
 /** @param {string} projectDir */
 export function readReleases(projectDir) {
   return readMarkdownRecords(

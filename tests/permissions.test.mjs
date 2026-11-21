@@ -24,6 +24,7 @@ test('permission template has the destructive and sensitive asks', () => {
     'read:**/.env.*:ask',
     'edit:AGENTS.md:ask',
     'edit:.opencode/**:ask',
+    'edit:$HOME/.config/opencode/riccon/*:ask',
     'edit:.git/**:ask',
     'external_directory:*:ask',
     'shell:*decision answer*:ask',

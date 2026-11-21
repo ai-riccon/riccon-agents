@@ -1,5 +1,28 @@
 # 变更日志
 
+## 0.1.11（2026-11-21）
+
+- 评审 finding 闭环：0.1.11 起 `verdict: pass` 不得保留 open finding；P0/P1 必须 fixed，P2/P3 必须 fixed 或带 owner/due/accepted_reason 的 accepted。2026-11-22 之前的旧评审在 `state validate` 中只 warning，避免追溯失败；gate/release 对 P0/P1 仍始终失败。
+- 任务评审与模块评审对齐：`state validate` 检查每个任务最新的 task review；模块评审用 `reviewed_task_reviews` 列出本模块最新 task review，gate 和 `state validate` 检查覆盖。
+- 评审历史保留：替换模块评审前必须归档；`previous_review`/`supersedes` 找不到时 `state validate` warning。
+- 合同路线图漂移：`contract.product.module_roadmap[].status` 与实际 module status 不一致时 warning。
+- 设计评审自检：Architect 提交独立评审前提供 AC/契约/THREAT/测试 ID 自检矩阵；复审使用 finding 关闭矩阵，只审 delta 和回归。
+- 更新模板、README、STATE、verify/review 提示和测试；不降低 DoD、证据、E2E、a11y、security、性能或 gate 标准。
+
+## 0.1.10（2026-11-20）
+
+- 新增 `/riccon-improve` 命令：对指定项目做只读会话复盘，评估团队交付质量与执行效率，方案确认后才修改团队定义，并在执行后验证落地、检查文案冲突、生成项目侧同步 prompt。
+- doctor 增加该命令的存在性检查；安装器和 README 同步命令列表。
+
+## 0.1.9（2026-11-20）
+
+- 文档与规则收敛：修正 handoff gate 新鲜度、Haiku 默认模型、权限事实源、`.ricon` 提示、CLI 调用约定、时区例外和里程碑/流程文案。
+- 任务创建更严格：`riccon task new` 要求至少一个 `--write-scope` 和一个 `--acceptance`；空任务 brief 直接失败。
+- 评审会话收紧：0.1.9 起新 review 使用非真实 `ses_...` ID 会让 gate 失败；旧 review 仍只产生 warning。模板改用明显不可用的占位值。
+- 发布评审补齐：新增 `templates/state/release-review.md`；明确 RELEASE 评审用 `reviewed_evidence` 覆盖发布证据，不复用模块 review 的 `dod_evidence` 绑定。
+- 沙箱模板补齐 `allowlist` / `attestation_terms`；编码规范模板去掉 PostgreSQL 专有类型，保持技术栈无关。
+- 权限基线增加编辑已安装 Riccon 内核的 ask；T3/T4 DoD 说明改为合同驱动，避免默认 key 被误认为完整清单。
+
 ## 0.1.8（2026-11-20）
 
 - 修复 handoff gate 新鲜度检查：只与被 gate 模块的任务比较；其他模块的 planned/ready 任务不再让 gate 过期。

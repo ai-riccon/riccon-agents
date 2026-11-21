@@ -22,7 +22,7 @@
 
 ## 3. 团队形状
 
-5 个核心角色：
+5 个核心角色（Ops 按需，合计 6 个角色）：
 
 | 角色 | 负责 | 不写 |
 |---|---|---|
@@ -59,7 +59,7 @@ intake → contract → MVC → build → independent verify → gate → review
       → user veto window → next module → ... → release → operate/retro
 ```
 
-模块是带用户可见结果的纵向切片。依赖完成，且前一个用户可见模块完成 Product/用户验收后，下一个用户可见模块才能开始；修复模块用 `fixes_module` 例外。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。架构/ADR 同时完成 Lead、用户（不可逆项）、Verifier、Ops 的评审，未评审 ADR 保持 `proposed`。Builder 只把任务移到 review，高风险任务 done 前必须有独立 Verifier 评审。gate 检查通过后、标记模块 done 前，Product 按需求/UX/范围做预验收；Product `pass` 后才标记 done，再由用户做最终验收。用户未 `accepted` 前不启动下一个用户可见模块；验收失败的修复用 `kind: fix` + `fixes_module`，或显式决策后重开。模块过大时在构建前拆分，并用 `split_from`/`aliases` 记录关系；一个任务只承载一个可独立验收的用户可见结果。测试按两层执行：任务级跑受影响测试，模块 gate 在最终提交上跑一次全量合同测试和覆盖率；同一份代码不重复全量，最终命令只取证一次。
+模块是带用户可见结果的纵向切片。依赖完成，且前一个用户可见模块完成 Product/用户验收后，下一个用户可见模块才能开始；修复模块用 `fixes_module` 例外。MVC 是第一个模块：一条关键旅程，端到端。进入构建前，Product 产出必须完成评审链：Lead 检查完整性/合同一致性，用户批准范围与 AC，Architect 评可行性，Verifier 检查 AC 可验证性；结论记录在 `docs/PRODUCT.md` 评审状态表。架构/ADR 同时完成 Lead、用户（不可逆项）、Verifier、Ops 的评审，未评审 ADR 保持 `proposed`。Builder 只把任务移到 review，高风险任务 done 前必须有独立 Verifier 评审。gate 检查通过后、标记模块 done 前，Product 按需求/UX/范围做预验收；Product `pass` 后才标记 done，再由用户做最终验收。用户未 `accepted` 前不启动下一个用户可见模块；验收失败的修复用 `kind: fix` + `fixes_module`，或显式决策后重开。模块过大时在构建前拆分，并用 `split_from`/`aliases` 记录关系；一个任务只承载一个可独立验收的用户可见结果。测试按两层执行：任务级跑受影响测试，模块 gate 在最终提交上跑一次全量合同 test/coverage/E2E；同一份代码不重复全量，最终命令只取证一次。
 
 ## 6. 自治刹车
 
@@ -71,7 +71,7 @@ intake → contract → MVC → build → independent verify → gate → review
 
 ## 7. 质量
 
-DoD 随轨道变化。T3/MVC 需要验收、构建、测试、关键 E2E、可访问性、安全基线、性能预算、迁移回滚、文档、证据和独立签字。T4 增加威胁建模、负载测试、容灾和明确发布批准。
+DoD 随轨道变化。T3/MVC 的合同 DoD 应覆盖验收、构建、测试、关键 E2E、可访问性、安全基线、性能预算、迁移回滚、文档、证据和独立签字；默认模板只列最小 key，T3/T4 项目必须显式补充。T4 增加威胁建模、负载测试、容灾和明确发布批准。
 
 执行零个测试的测试命令是失败。retry 不能掩盖 flake。verifier 写 review；作者不写。AC 对账必须引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据。
 
@@ -79,7 +79,7 @@ DoD 随轨道变化。T3/MVC 需要验收、构建、测试、关键 E2E、可�
 
 `.riccon/` 是执行状态的唯一事实源。会话从状态 + 最新 handoff + 合同开始；以更新状态和 handoff 结束。聊天历史不是记忆。
 
-Lead 在每个模块 gate 完成后、phase 切换、决策/评审包后、会话暂停超过 24h、切换项目/风险/模型或进入 T4/生产批准前写 handoff，并让用户新开 session。输入接近 120K tokens、300/440 steps、60 次工具调用或自动 compaction 一次只是检查点，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须具备状态/证据/review/gate 已更新、无半写文件或未完成 subagent、`next` 可直接执行、新会话无需重读旧聊天；否则继续或标 blocked。上下文卫生和成本都低于任务质量；不得为了省钱跳过测试、E2E、独立 review 或证据。Architect/Verifier 的 Haiku 接近 80K 时只在任务边界拆新 subagent。
+Lead 在每个模块 gate 完成后、phase 切换、决策/评审包后、会话暂停超过 24h、切换项目/风险/模型或进入 T4/生产批准前写 handoff，并让用户新开 session。输入接近 120K tokens、300/440 steps、60 次工具调用或自动 compaction 一次只是检查点，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须具备状态/证据/review/gate 已更新、无半写文件或未完成 subagent、`next` 可直接执行、新会话无需重读旧聊天；否则继续或标 blocked。上下文卫生和成本都低于任务质量；不得为了省钱跳过测试、E2E、独立 review 或证据。Architect/Verifier 接近各自上下文预算时，只在任务边界拆新 subagent；T4/安全评审可临时使用第二模型复核。
 
 ## 9. 工具
 
@@ -93,7 +93,7 @@ Lead 在每个模块 gate 完成后、phase 切换、决策/评审包后、会�
 - **M1**：单会话受监督循环：合同 → 任务 → 证据 → 独立 E2E/axe → gate → 评审包 → handoff。
 - **M2/M3**：多角色协作、`adopt` 接管、Ops（Docker/runbook/verify/CI）和示例 CI。
 - **M4**：发布门禁、sandbox 检查、回滚演练和模型映射。
-- **H4/H5**：strict DoD 证据绑定、显式 task scope、成本记录、adopt 多栈、shell 证据解析加固。
+- **0.1.4–0.1.11**：strict DoD 证据绑定、显式 task scope、成本记录、adopt 多栈、shell 证据解析加固、任务 brief/评审会话收紧、评审 finding 闭环、评审历史保留、合同路线图漂移检查和 `/riccon-improve` 复盘命令。
 
 公开快照只保留团队内核、模板、测试和公开文档；历史试点报告、审计材料和示例证据不随仓库发布。
 

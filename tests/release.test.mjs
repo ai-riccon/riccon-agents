@@ -148,7 +148,7 @@ function writeSecondReview(dir, overrides = {}) {
     environment: 'production',
     reviewerAgent: 'riccon/verifier-recheck',
     reviewerModel: 'claude-haiku-5-5',
-    reviewerSession: 'second-review-session',
+    reviewerSession: 'ses_abcdefghijklmnop0123456789',
     ...overrides,
   });
 }
@@ -597,6 +597,31 @@ test('release check binds the release review to release/version/environment', (t
   assert.match(fail.json.errors.join(' '), /bound to REL-9999/);
 });
 
+test('release check rejects a new release review with an open P2', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  prepareRelease(dir);
+  writeReleaseReview(dir, {
+    findings: [
+      {
+        id: 'F-001',
+        severity: 'P2',
+        status: 'open',
+        title: 'still open',
+      },
+    ],
+    createdAt: '2026-11-23T00:00:00+08:00',
+  });
+
+  const fail = runJson(['release', 'check', '--legacy-scope', '--project', dir]);
+  assert.equal(fail.code, 1);
+  assert.match(
+    fail.json.errors.join(' '),
+    /P2 finding F-001 is open; new pass reviews must fix it or mark it accepted/,
+  );
+});
+
 test('release check requires the release review to cover release evidence', (t) => {
   const dir = tempDir();
   t.after(() => cleanup(dir));
@@ -610,6 +635,21 @@ test('release check requires the release review to cover release evidence', (t) 
     fail.json.errors.join(' '),
     /release review does not list reviewed_evidence/,
   );
+});
+
+test('release check rejects a new release review with a synthetic session', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  prepareRelease(dir);
+  writeReleaseReview(dir, {
+    reviewerSession: 'test-session',
+    createdAt: '2026-11-21T00:00:00+08:00',
+  });
+
+  const fail = runJson(['release', 'check', '--legacy-scope', '--project', dir]);
+  assert.equal(fail.code, 1);
+  assert.match(fail.json.errors.join(' '), /release reviewer\.session .* is not a real ses_/);
 });
 
 test('release approve rejects non-affirmative and replayed decisions', (t) => {

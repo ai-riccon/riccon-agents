@@ -63,10 +63,11 @@ test('task template validates', () => {
   assert.deepEqual(result.errors, []);
 });
 
-test('decision, review, task review and handoff templates have valid front matter', () => {
+test('decision, review, release review, task review and handoff templates have valid front matter', () => {
   for (const [file, schema] of [
     ['templates/state/decision.md', 'decision.schema.json'],
     ['templates/state/review.md', 'review.schema.json'],
+    ['templates/state/release-review.md', 'review.schema.json'],
     ['templates/state/task-review.md', 'task-review.schema.json'],
     ['templates/state/handoff.md', 'handoff.schema.json'],
   ]) {

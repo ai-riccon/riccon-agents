@@ -12,7 +12,7 @@
 
 沙箱不是“跑一次容器”就算完成。L2 需要：
 
-- 合同声明 `sandbox.required`、`sandbox.runtime`、`sandbox.network`、`sandbox.mounts`、`sandbox.secrets`、`sandbox.evidence`；
+- 合同声明 `sandbox.required`、`sandbox.runtime`、`sandbox.network`/`sandbox.allowlist`、`sandbox.mounts`、`sandbox.secrets`、`sandbox.attestation_terms`、`sandbox.evidence`；
 - `commands.sandbox` 可复现；
 - `docs/SANDBOX.md` 写清挂载、网络、密钥、清理、限制；
 - 一次通过的沙箱证据；

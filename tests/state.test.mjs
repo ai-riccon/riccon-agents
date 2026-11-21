@@ -4,12 +4,15 @@ import { join } from 'node:path';
 import {
   cleanup,
   initProject,
+  mutateContract,
   readJson,
   run,
   runJson,
   tempDir,
   writeJson,
+  writeReview,
   writeTaskReview,
+  writeText,
 } from './helpers.mjs';
 
 function addModuleAndTask(dir) {
@@ -33,6 +36,10 @@ function addModuleAndTask(dir) {
     'Build the toy',
     '--owner',
     'riccon/builder',
+    '--write-scope',
+    'src/**',
+    '--acceptance',
+    'Toy works',
     '--project',
     dir,
   ]);
@@ -240,4 +247,207 @@ test('state validation catches a dangling evidence reference', (t) => {
   const result = runJson(['state', 'validate', '--project', dir]);
   assert.equal(result.code, 1);
   assert.match(result.json.errors.join(' '), /unknown evidence EV-9999/);
+});
+
+test('new task review with an open P2 fails state validation', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeTaskReview(dir, {
+    moduleId: 'M01',
+    taskId: 'TASK-0001',
+    findings: [
+      {
+        id: 'F-001',
+        severity: 'P2',
+        status: 'open',
+        title: 'still open',
+      },
+    ],
+    createdAt: '2026-11-23T00:00:00+08:00',
+  });
+
+  const result = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(result.code, 1);
+  assert.match(
+    result.json.errors.join(' '),
+    /P2 finding F-001 is open; new pass reviews must fix it or mark it accepted/,
+  );
+});
+
+test('legacy task review with an open P2 only warns', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeTaskReview(dir, {
+    moduleId: 'M01',
+    taskId: 'TASK-0001',
+    findings: [
+      {
+        id: 'F-001',
+        severity: 'P2',
+        status: 'open',
+        title: 'legacy open',
+      },
+    ],
+    createdAt: '2026-11-19T00:00:00+08:00',
+  });
+
+  const result = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(result.code, 0, result.json?.errors?.join('; '));
+  assert.match(result.json.warnings.join(' '), /legacy review only warns/);
+});
+
+test('legacy task review with an open P1 only warns', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeTaskReview(dir, {
+    moduleId: 'M01',
+    taskId: 'TASK-0001',
+    findings: [
+      {
+        id: 'F-001',
+        severity: 'P1',
+        status: 'open',
+        title: 'legacy blocking finding',
+      },
+    ],
+    createdAt: '2026-11-19T00:00:00+08:00',
+  });
+
+  const result = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(result.code, 0, result.json?.errors?.join('; '));
+  assert.match(
+    result.json.warnings.join(' '),
+    /P1 finding F-001 is open; P0\/P1 must be fixed before pass \(legacy review only warns\)/,
+  );
+});
+
+test('new accepted findings require owner, due and reason', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeTaskReview(dir, {
+    moduleId: 'M01',
+    taskId: 'TASK-0001',
+    findings: [
+      {
+        id: 'F-001',
+        severity: 'P2',
+        status: 'accepted',
+        title: 'accepted without metadata',
+      },
+    ],
+    createdAt: '2026-11-23T00:00:00+08:00',
+  });
+
+  const fail = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(fail.code, 1);
+  assert.match(fail.json.errors.join(' '), /missing owner, due, accepted_reason/);
+
+  writeTaskReview(dir, {
+    moduleId: 'M01',
+    taskId: 'TASK-0001',
+    findings: [
+      {
+        id: 'F-001',
+        severity: 'P2',
+        status: 'accepted',
+        title: 'accepted with metadata',
+        owner: 'riccon/builder',
+        due: 'M02 gate',
+        accepted_reason: 'bounded risk with follow-up',
+      },
+    ],
+    createdAt: '2026-11-23T00:00:00+08:00',
+  });
+
+  const pass = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(pass.code, 0, pass.json?.errors?.join('; '));
+});
+
+test('new module review must list latest task reviews', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeTaskReview(dir, {
+    moduleId: 'M01',
+    taskId: 'TASK-0001',
+    reviewId: 'REV-TASK-0001-001',
+    createdAt: '2026-11-23T00:00:00+08:00',
+  });
+  writeReview(dir, {
+    moduleId: 'M01',
+    createdAt: '2026-11-23T00:00:00+08:00',
+    reviewedTaskReviews: [],
+  });
+
+  const fail = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(fail.code, 1);
+  assert.match(
+    fail.json.errors.join(' '),
+    /does not list latest task review REV-TASK-0001-001/,
+  );
+
+  writeReview(dir, {
+    moduleId: 'M01',
+    createdAt: '2026-11-23T00:00:00+08:00',
+    reviewedTaskReviews: ['REV-TASK-0001-001'],
+  });
+  const pass = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(pass.code, 0, pass.json?.errors?.join('; '));
+});
+
+test('missing previous_review only warns, archived review ids resolve', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  writeReview(dir, {
+    moduleId: 'M01',
+    previousReview: 'REV-MISSING-001',
+    createdAt: '2026-11-23T00:00:00+08:00',
+  });
+
+  const warn = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(warn.code, 0, warn.json?.errors?.join('; '));
+  assert.match(warn.json.warnings.join(' '), /REV-MISSING-001 is not found/);
+
+  writeText(
+    join(dir, '.riccon', 'archive', 'reviews', 'M01-review-old.md'),
+    '---\nreview_id: REV-OLD-001\n---\n\nold review\n',
+  );
+  writeReview(dir, {
+    moduleId: 'M01',
+    previousReview: 'REV-OLD-001',
+    createdAt: '2026-11-23T00:00:00+08:00',
+  });
+  const pass = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(pass.code, 0, pass.json?.errors?.join('; '));
+  assert.doesNotMatch(pass.json.warnings.join(' '), /REV-OLD-001 is not found/);
+});
+
+test('contract roadmap status drift warns without failing state', (t) => {
+  const dir = tempDir();
+  t.after(() => cleanup(dir));
+  assert.equal(initProject(dir).code, 0);
+  addModuleAndTask(dir);
+  mutateContract(dir, (contract) => {
+    contract.product.module_roadmap = [
+      { id: 'M01', title: 'MVC', goal: 'toy', status: 'planned' },
+    ];
+  });
+
+  const result = runJson(['state', 'validate', '--project', dir]);
+  assert.equal(result.code, 0, result.json?.errors?.join('; '));
+  assert.match(
+    result.json.warnings.join(' '),
+    /contract roadmap M01 status is planned, but module is building/,
+  );
 });

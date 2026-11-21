@@ -21,6 +21,7 @@ const EXPECTED_COMMANDS = [
   'riccon-decision',
   'riccon-resume',
   'riccon-release',
+  'riccon-improve',
 ];
 const EXPECTED_SKILLS = [
   'riccon-core',
@@ -94,7 +95,7 @@ export function runDoctor(teamRoot) {
     add(
       'state-dir-typo',
       'fail',
-      `found .ricon (one c) directory; use .ricon: ${strayStateDirs
+      `found .ricon (one c) directory; use .riccon: ${strayStateDirs
         .map((dir) => relative(teamRoot, dir))
         .join(', ')}`,
     );
@@ -329,6 +330,7 @@ export function runDoctor(teamRoot) {
       ['edit', 'AGENTS.md'],
       ['edit', '.opencode/**'],
       ['edit', '.git/**'],
+      ['edit', '$HOME/.config/opencode/riccon/*'],
       ['external_directory', '*'],
     ]) {
       if (!has(action, resource)) {
@@ -519,12 +521,28 @@ export function runDoctor(teamRoot) {
   const templateReview = join(teamRoot, 'templates', 'state', 'review.md');
   if (!exists(templateReview)) {
     add('template-review', 'fail', 'templates/state/review.md is missing');
-  } else if (!readText(templateReview).includes('dod_evidence:')) {
-    add(
-      'template-review-binding',
-      'fail',
-      'templates/state/review.md must document dod_evidence for strict DoD binding',
-    );
+  } else {
+    const text = readText(templateReview);
+    if (!text.includes('dod_evidence:')) {
+      add(
+        'template-review-binding',
+        'fail',
+        'templates/state/review.md must document dod_evidence for strict DoD binding',
+      );
+    }
+    if (!text.includes('reviewed_task_reviews:')) {
+      add(
+        'template-review-task-coverage',
+        'fail',
+        'templates/state/review.md must document reviewed_task_reviews for task review coverage',
+      );
+    } else {
+      add(
+        'template-review-task-coverage',
+        'pass',
+        'templates/state/review.md documents reviewed_task_reviews',
+      );
+    }
   }
 
   const templateTaskReview = join(teamRoot, 'templates', 'state', 'task-review.md');
@@ -536,6 +554,46 @@ export function runDoctor(teamRoot) {
       'fail',
       'templates/state/task-review.md must document task_id for task review binding',
     );
+  }
+
+  const templateReleaseReview = join(
+    teamRoot,
+    'templates',
+    'state',
+    'release-review.md',
+  );
+  if (!exists(templateReleaseReview)) {
+    add(
+      'template-release-review',
+      'fail',
+      'templates/state/release-review.md is missing',
+    );
+  } else {
+    const text = readText(templateReleaseReview);
+    let valid = true;
+    if (!text.includes('module_id: RELEASE')) {
+      valid = false;
+      add(
+        'template-release-review-module',
+        'fail',
+        'templates/state/release-review.md must use module_id: RELEASE',
+      );
+    }
+    if (!text.includes('reviewed_evidence:')) {
+      valid = false;
+      add(
+        'template-release-review-evidence',
+        'fail',
+        'templates/state/release-review.md must document reviewed_evidence',
+      );
+    }
+    if (valid) {
+      add(
+        'template-release-review',
+        'pass',
+        'templates/state/release-review.md is present',
+      );
+    }
   }
 
   return {

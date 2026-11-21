@@ -8,6 +8,7 @@ import {
   readModules,
   readReviews,
   readTasks,
+  readTaskReviews,
   projectPaths,
   saveState,
 } from './project.mjs';
@@ -22,6 +23,12 @@ import {
 } from './evidence.mjs';
 import { unclaimedScopeErrors, writeScopeErrors } from './scope.mjs';
 import { isMaskingShellCommand } from './shell.mjs';
+import {
+  isRealSessionId,
+  requiresRealSession,
+  reviewClosureChecks,
+  reviewTaskCoverageChecks,
+} from './review.mjs';
 
 /** DoD 项到合同命令字段的映射；acceptance/docs 没有唯一命令。 */
 const DOD_COMMANDS = {
@@ -34,11 +41,6 @@ const DOD_COMMANDS = {
 /** builder 实例 owner 的前缀；用于识别实现角色，防止实例 owner 绕过独立性检查。 */
 function isBuilderRole(agent) {
   return agent === 'riccon/builder' || String(agent || '').startsWith('riccon/builder-');
-}
-
-/** 真实 OpenCode 会话 ID；旧 review 的合成标签只产生 warning。 */
-function isRealSessionId(session) {
-  return /^ses_[A-Za-z0-9]+$/.test(String(session || ''));
 }
 
 /**
@@ -384,6 +386,7 @@ export function checkGate({ projectDir, moduleId, allowOverrun = false, requireS
   }
 
   const reviews = readReviews(projectDir);
+  const taskReviews = readTaskReviews(projectDir);
   const review = findReview(projectDir, moduleId, module, reviews);
   const requiredDod = moduleDod(contract);
   const tier = contract.project?.risk_tier || 'T3';
@@ -562,10 +565,15 @@ export function checkGate({ projectDir, moduleId, allowOverrun = false, requireS
         `reviewer ${review.data.reviewer.agent || review.data.verifier} is marked independent`,
       );
       if (!isRealSessionId(review.data.reviewer.session)) {
+        const enforce = requiresRealSession(review.data.created_at);
         add(
           'review_session_format',
-          'warn',
-          `reviewer.session ${review.data.reviewer.session} is not a real ses_ session id; new reviews must use the actual OpenCode session id`,
+          enforce ? 'fail' : 'warn',
+          `reviewer.session ${review.data.reviewer.session} is not a real ses_ session id; ${
+            enforce
+              ? 'reviews created on or after 2026-11-20 must use the actual OpenCode session id'
+              : 'legacy reviews before 2026-11-20 only warn'
+          }`,
         );
       }
     }
@@ -667,21 +675,13 @@ export function checkGate({ projectDir, moduleId, allowOverrun = false, requireS
       );
     }
 
-    for (const finding of review.data.findings || []) {
-      const blockingSeverity = finding.severity === 'P0' || finding.severity === 'P1';
-      if (blockingSeverity && finding.status !== 'fixed') {
-        add(
-          `finding:${finding.id}`,
-          'fail',
-          `${finding.severity} finding ${finding.id} is ${finding.status}: ${finding.title}`,
-        );
-      } else if (!blockingSeverity && finding.status === 'open') {
-        add(
-          `finding:${finding.id}`,
-          'warn',
-          `${finding.severity} finding ${finding.id} is open: ${finding.title}`,
-        );
-      }
+    for (const check of reviewClosureChecks(review.data, {
+      prefix: 'finding',
+    })) {
+      add(check.id, check.status, check.message);
+    }
+    for (const check of reviewTaskCoverageChecks(review.data, taskReviews)) {
+      add(check.id, check.status, check.message);
     }
   }
 

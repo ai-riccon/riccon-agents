@@ -106,7 +106,7 @@ handoff 只发生在**质量安全的边界**，不能为了省 token 提前切�
 - 输入接近 120K、300/440 steps、60 次工具调用，或自动 compaction 一次，只是**检查点**：先判断现在切会不会降低质量或导致返工；不会才切，会就继续做完。
 - handoff 前必须具备：状态/证据/review/gate 已更新；代码文档可恢复；没有半写文件、未完成 subagent 或未应用决策；`next` 是可直接执行的命令；新会话无需重读旧聊天。
 - 任何一项不满足：不要 handoff；继续或标 blocked。不得为了省额度跳过测试、E2E、独立 review 或证据。
-- Architect/Verifier 的 Haiku 接近 80K 时，优先在任务边界拆新 subagent；不要在 review/验证中途切。
+- Architect/Verifier 接近各自上下文预算时，优先在任务边界拆新 subagent；不要在 review/验证中途切。T4/安全评审可临时使用第二模型复核。
 
 handoff 写状态和确切下一步，不贴日志；新会话从 `.riccon/` + handoff 恢复。自动 compaction 是有损摘要且消耗 token，不能替代 handoff。
 
@@ -188,6 +188,8 @@ node scripts/riccon.mjs <command>
 ```bash
 node "$HOME/.config/opencode/riccon/scripts/riccon.mjs" <command>
 ```
+
+文档和命令里的 `riccon` 是简写；如果 `command -v riccon` 为空，使用上面的 node 路径。
 
 常用：`init`、`adopt`、`contract validate`、`contract sync`、`state validate`、`module`、`task`、`evidence`、`decision new|answer|list|show`、`gate check`、`release new|check|approve`、`sandbox check`、`handoff`、`status`、`doctor`。
 

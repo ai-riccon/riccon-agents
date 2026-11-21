@@ -112,9 +112,11 @@ export function defaultContract({
       required: false,
       runtime: '',
       network: '',
+      allowlist: [],
       mounts: [],
       secrets: '',
       limits: {},
+      attestation_terms: [],
       evidence: '',
     },
     tools: {

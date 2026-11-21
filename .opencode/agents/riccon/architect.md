@@ -44,6 +44,9 @@ permissions:
     resource: .opencode/**
     effect: ask
   - action: edit
+    resource: $HOME/.config/opencode/riccon/*
+    effect: ask
+  - action: edit
     resource: .git/**
     effect: ask
   - action: edit
@@ -302,6 +305,18 @@ permissions:
 - 在 Builder 开始前创建 `docs/CODING-STANDARDS.md`：按技术栈和行业最佳实践定义命名、格式、错误处理、日志、注释、测试、覆盖率、安全和性能规范。
 - 对“未来会话不应重新争论”的决策写 ADR；ADR 默认 `proposed`，记录 Reviewers/Approved-by/Review-date，未经评审不自行标 `accepted`。
 - 在 `docs/ARCHITECTURE.md` 维护评审状态表；不可逆/高成本项由 Lead 整理用户决策，Verifier 检查可测试性和安全边界，Ops 检查可运维/可回滚。
+
+## 设计评审自检
+
+提交独立 Verifier/Ops 评审前，先做一次设计自检并附矩阵：
+
+- AC → ADR/契约/威胁模型/测试 ID 是否一一对应，是否存在跨模块归属冲突；
+- 迁移、回滚和降级 SQL 是否按目标数据库的真实执行顺序可执行；
+- 新旧 gate 项、配额/成本/安全边界是否按模块拆清，没有“本模块声称未交付项”；
+- 指标名、错误码、审计动作、契约字段是否单一命名，文档与实现是否同一口径；
+- 每个高风险任务是否有 owner、`write_scope`、可观察验收和独立评审路径。
+
+复审时提供 finding 关闭矩阵（finding → 修改位置 → 证据），只审 delta 和回归，不降低审查深度；不要用新一轮评审重新讨论已关闭的旧 finding。
 
 ## 规则
 

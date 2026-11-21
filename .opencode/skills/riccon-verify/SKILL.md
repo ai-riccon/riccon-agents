@@ -35,7 +35,7 @@ riccon evidence add --task TASK-0001 --command "npm test" --output test.log --ex
 
 ## 2. 按轨道的 DoD
 
-AC 对账必须引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据。模块 gate 通过后、标记 done 前完成 Product 预验收；用户最终验收未 accepted 前不启动下一个用户可见模块。
+AC 对账必须引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据。若 accepted finding 影响某条 AC 的 Then 子句，该 AC 必须标为 `pass (with residual)` 并写清残余，不能标成无条件的 `pass`。模块 gate 通过后、标记 done 前完成 Product 预验收；用户最终验收未 accepted 前不启动下一个用户可见模块。
 
 T1/T2：
 
@@ -58,7 +58,9 @@ T3/MVC：
 - 独立 verifier verdict 为 `pass`，无开放 P0/P1；
 - gate check 通过。
 
-T4 额外要求：威胁建模、负载/性能测试、容灾/回滚演练、明确发布批准。发布评审写 `.riccon/reviews/RELEASE-review.md`，DoD 使用合同的 `definition_of_done.release`；发布记录和批准由 Lead 维护，Verifier 不代替用户批准。发布前同时运行 `riccon sandbox check` 和 `riccon release check`。
+上面的可访问性、安全、性能、迁移项如果要求 gate 阻断，必须写进合同 `definition_of_done.module`；只写在合同 `constraints` 里时，它们仍是 Verifier 评审项，不会自动成为 gate key。
+
+T4 额外要求：威胁建模、负载/性能测试、容灾/回滚演练、明确发布批准。发布评审写 `.riccon/reviews/RELEASE-review.md`，模板是 `templates/state/release-review.md`，DoD 使用合同的 `definition_of_done.release`（布尔清单）；release 证据由 `reviewed_evidence` 覆盖，不使用模块 review 的 `dod_evidence` 绑定；发布记录和批准由 Lead 维护，Verifier 不代替用户批准。发布前同时运行 `riccon sandbox check` 和 `riccon release check`。
 
 ## 3. 假绿
 
@@ -110,7 +112,7 @@ module_id: M01
 verifier: riccon/verifier
 reviewer:
   agent: riccon/verifier
-  session: ses_xxx
+  session: REPLACE_WITH_REAL_SESSION_ID
   model: opencode-go/deepseek-v4.1-flash#max
   independent: true
 verdict: pass | fail | blocked
@@ -135,12 +137,20 @@ findings:
     severity: P0 | P1 | P2 | P3
     title: ...
     status: open | fixed | accepted
+    # accepted 必填，用于后续跟踪：
+    owner: riccon/builder-xxx
+    due: Mxx gate 前
+    accepted_reason: 为什么风险有界、为什么可以接受
+reviewed_task_reviews:
+  - REV-TASK-0001
 created_at: ...
 ```
 
-`quality.evidence_binding: strict` 时，`dod_evidence` 是必填项：每个 true 的 acceptance/build/tests/e2e/coverage/docs 必须指向真实、非 manual、exit 0、已列入 `reviewed_evidence` 的 EV；build/tests/e2e/coverage 的命令还要覆盖合同命令。不要用自报、空命令或 `not-implemented` 占位通过；未加引号管道默认被拒绝，`||` 只允许 `exit 非零`，`; true`/`exit 0`/后台 `&` 等掩盖失败的命令也会被 gate 拒绝。
+`verdict: pass` 时不得保留 `open` finding：P0/P1 必须 `fixed`；P2/P3 必须 `fixed` 或 `accepted`，且 accepted 必须写 `owner`、`due`、`accepted_reason`。模块评审还要用 `reviewed_task_reviews` 列出本模块每个已有 task review 的最新 `review_id`；评审前逐条读这些 task review，把影响 AC 的 accepted finding 写进 AC residual 和模块 findings。
 
-`reviewer.session` 必须是当前真实 `ses_...` 会话 ID；不要写 `ses_verifier_*` 或人类标签。旧 review 的合成标签只产生 warning，新 review 必须使用真实 ID。
+`quality.evidence_binding: strict` 时，**模块 review** 的 `dod_evidence` 是必填项：每个 true 的 acceptance/build/tests/e2e/coverage/docs 必须指向真实、非 manual、exit 0、已列入 `reviewed_evidence` 的 EV；build/tests/e2e/coverage 的命令还要覆盖合同命令。不要用自报、空命令或 `not-implemented` 占位通过；未加引号管道默认被拒绝，`||` 只允许 `exit 非零`，`; true`/`exit 0`/后台 `&` 等掩盖失败的命令也会被 gate 拒绝。
+
+`reviewer.session` 必须是当前真实 `ses_...` 会话 ID；不要写 `ses_verifier_*`、`ses_xxx` 或人类标签。0.1.9 起创建的 review 使用非真实 ID 会让 gate 失败；2026-11-20 之前的旧 review 只产生 warning。
 
 然后运行 `riccon gate check --module M01`。
 

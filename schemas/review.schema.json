@@ -32,6 +32,12 @@
       "type": "array",
       "items": { "type": "string", "pattern": "^EV-[0-9]{4,}$" }
     },
+    "reviewed_task_reviews": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "previous_review": { "type": "string" },
+    "supersedes": { "type": "string" },
     "release_id": {
       "type": ["string", "null"],
       "pattern": "^REL-[0-9]{4,}$"
@@ -70,6 +76,9 @@
           "severity": { "enum": ["P0", "P1", "P2", "P3"] },
           "title": { "type": "string" },
           "status": { "enum": ["open", "fixed", "accepted"] },
+          "owner": { "type": "string" },
+          "due": { "type": "string" },
+          "accepted_reason": { "type": "string" },
           "evidence": { "type": "string" }
         }
       }

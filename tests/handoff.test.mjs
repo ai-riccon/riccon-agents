@@ -186,6 +186,10 @@ test('handoff gate freshness ignores planned tasks in other modules', (t) => {
     'Later',
     '--owner',
     'riccon/builder-b2',
+    '--write-scope',
+    'src/**',
+    '--acceptance',
+    'Later works',
     '--project',
     dir,
   ]);

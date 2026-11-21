@@ -19,6 +19,7 @@ import {
   ensureProjectDirs,
   loadProject,
   projectPaths,
+  readArchivedReviewIds,
   readDecisions,
   readEvidence,
   readHandoffs,
@@ -48,6 +49,11 @@ import {
   showDecision,
 } from './decision.mjs';
 import { checkGate, recordGateResult, renderGateReport } from './gate.mjs';
+import {
+  latestTaskReviews,
+  reviewClosureChecks,
+  reviewTaskCoverageChecks,
+} from './review.mjs';
 import {
   approveRelease,
   checkRelease,
@@ -135,7 +141,7 @@ Usage:
               [--source TEXT] [--note TEXT] [--project DIR] [--json]
   riccon module list|show [M01] [--project DIR] [--json]
   riccon task new --module M01 --title TITLE [--owner riccon/builder]
-              [--write-scope PATH] [--acceptance TEXT] [--project DIR] [--json]
+              --write-scope PATH --acceptance TEXT [--project DIR] [--json]
   riccon task update TASK-0001 --status planned|ready|in_progress|review|done|blocked
               [--owner NAME] [--blocker TEXT] [--clear-blocker] [--tool ID]
               [--baseline-commit SHA] [--end-commit SHA]
@@ -557,6 +563,8 @@ function cmdState(args) {
   let tasks = [];
   let evidence = [];
   let taskReviews = [];
+  let reviews = [];
+  let contract = null;
   try {
     const loaded = loadProject(projectDir);
     state = loaded.state;
@@ -565,6 +573,7 @@ function cmdState(args) {
   }
   try {
     const contractResult = loadContract(projectDir);
+    contract = contractResult.contract;
     errors.push(...contractResult.errors);
   } catch (error) {
     errors.push(`contract: ${error.message}`);
@@ -588,6 +597,11 @@ function cmdState(args) {
     taskReviews = readTaskReviews(projectDir);
   } catch (error) {
     errors.push(`task reviews: ${error.message}`);
+  }
+  try {
+    reviews = readReviews(projectDir);
+  } catch (error) {
+    errors.push(`reviews: ${error.message}`);
   }
 
   const moduleIds = new Set(modules.map((module) => module.id));
@@ -622,6 +636,22 @@ function cmdState(args) {
     ) {
       errors.push(
         `task ${task.id} is in_progress but not tracked in state.active_tasks.${task.owner}`,
+      );
+    }
+  }
+
+  const expectedRoadmapStatus = (status) => {
+    if (status === 'done') return 'done';
+    if (status === 'planned') return 'planned';
+    return 'building';
+  };
+  for (const item of contract?.product?.module_roadmap || []) {
+    const module = modules.find((candidate) => candidate.id === item?.id);
+    if (!module || !item?.status) continue;
+    const expected = expectedRoadmapStatus(module.status);
+    if (item.status !== expected) {
+      warnings.push(
+        `contract roadmap ${item.id} status is ${item.status}, but module is ${module.status}; update the contract or the module status`,
       );
     }
   }
@@ -765,9 +795,92 @@ function cmdState(args) {
     }
   }
 
+  // 只检查每个任务的最新 task review；旧评审保留历史，不追溯改写。
+  for (const record of latestTaskReviews(taskReviews).values()) {
+    if (record.error || !record.data) continue;
+    const checks = reviewClosureChecks(record.data, {
+      prefix: `task_review:${record.data.review_id}`,
+      legacyBlocking: false,
+    });
+    errors.push(
+      ...checks.filter((check) => check.status === 'fail').map((check) => check.message),
+    );
+    const legacy = checks.filter((check) => check.status === 'warn');
+    if (legacy.length) {
+      // 旧评审的 finding 可能很多；按评审聚合，避免 state validate 输出爆炸。
+      warnings.push(
+        `${record.data.review_id} has ${legacy.length} legacy finding warning(s): ${legacy
+          .map((check) => check.message)
+          .join('; ')}`,
+      );
+    }
+  }
+
+  for (const record of reviews) {
+    if (record.error) {
+      errors.push(record.error);
+      continue;
+    }
+    if (!record.data) continue;
+    const closure = reviewClosureChecks(record.data, {
+      prefix: `review:${record.data.review_id}`,
+      legacyBlocking: false,
+    });
+    errors.push(
+      ...closure.filter((check) => check.status === 'fail').map((check) => check.message),
+    );
+    const legacyFindings = closure.filter((check) => check.status === 'warn');
+    if (legacyFindings.length) {
+      warnings.push(
+        `${record.data.review_id} has ${legacyFindings.length} legacy finding warning(s): ${legacyFindings
+          .map((check) => check.message)
+          .join('; ')}`,
+      );
+    }
+    const coverage = reviewTaskCoverageChecks(record.data, taskReviews, {
+      prefix: `review_task_coverage:${record.data.review_id}`,
+    });
+    errors.push(
+      ...coverage.filter((check) => check.status === 'fail').map((check) => check.message),
+    );
+    const legacyCoverage = coverage.filter((check) => check.status === 'warn');
+    if (legacyCoverage.length) {
+      warnings.push(
+        `${record.data.review_id} does not list ${legacyCoverage.length} latest task review(s): ${legacyCoverage
+          .map((check) => check.message)
+          .join('; ')}`,
+      );
+    }
+  }
+
+  let archivedReviewIds = [];
+  try {
+    archivedReviewIds = readArchivedReviewIds(projectDir);
+  } catch (error) {
+    warnings.push(`archived reviews: ${error.message}`);
+  }
+  const knownReviewIds = new Set([
+    ...reviews
+      .map((record) => record.data?.review_id)
+      .filter(Boolean),
+    ...taskReviews
+      .map((record) => record.data?.review_id)
+      .filter(Boolean),
+    ...archivedReviewIds,
+  ]);
+  for (const record of [...reviews, ...taskReviews]) {
+    if (record.error || !record.data) continue;
+    for (const key of ['previous_review', 'supersedes']) {
+      const referenced = record.data[key];
+      if (!referenced || knownReviewIds.has(String(referenced))) continue;
+      warnings.push(
+        `${record.data.review_id} ${key} ${referenced} is not found in reviews/ or archive/reviews/; archive the superseded review before replacing it`,
+      );
+    }
+  }
+
   for (const records of [
     readDecisions(projectDir),
-    readReviews(projectDir),
     readHandoffs(projectDir),
   ]) {
     for (const record of records) {

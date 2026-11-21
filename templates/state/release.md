@@ -27,4 +27,4 @@ updated_at: "2026-01-01T00:00:00.000Z"
 
 # REL-0001
 
-使用 `riccon release new` 创建发布记录；用户批准后先 `riccon decision answer --kind approve --release REL-0001`，再 `riccon release approve`。模板中的 `answer_sha256` 是占位值，实际值由命令写入。
+使用 `riccon release new` 创建发布记录；用户批准后先 `riccon decision answer --kind approve --release REL-0001`，再 `riccon release approve`。RELEASE 评审模板见 `templates/state/release-review.md`。模板中的 `answer_sha256` 是占位值，实际值由命令写入。

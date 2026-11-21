@@ -9,7 +9,14 @@ test('doctor passes on the team repository', () => {
   assert.equal(result.json.errors.length, 0);
 
   const ids = result.json.checks.map((check) => check.id);
-  for (const id of ['schemas', 'agents', 'commands', 'skills']) {
+  for (const id of [
+    'schemas',
+    'agents',
+    'commands',
+    'skills',
+    'template-review-task-coverage',
+    'template-release-review',
+  ]) {
     assert.ok(ids.includes(id), `doctor should report ${id}`);
   }
 });

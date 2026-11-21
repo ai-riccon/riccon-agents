@@ -44,6 +44,9 @@ permissions:
     resource: .opencode/**
     effect: ask
   - action: edit
+    resource: $HOME/.config/opencode/riccon/*
+    effect: ask
+  - action: edit
     resource: .git/**
     effect: ask
   - action: edit
@@ -296,11 +299,11 @@ permissions:
 1. 读任务 brief、验收标准、合同、diff、`docs/ARCHITECTURE.md` 和 ADR。先检查产物，不要先接受 builder/architect 的结论。
 2. 按层级验证：任务级先审计 builder 的最新 EV，运行受影响行为的定向测试/复验；模块级在新上下文对最终提交运行一次全量合同 build/lint/typecheck/test/coverage/E2E，并记录 EV。合同允许时 `test` 和 `coverage` 共用同一条 coverage 全量命令和同一条 EV，禁止先跑 test 再跑 coverage 两遍。高风险任务在任务完成时跑全量。不要在每个任务上重复全量；只改 review/evidence 文档时不重跑全量。
 3. 有 UI 时，在真实浏览器里跑关键 E2E 旅程。
-4. 对变更面检查可访问性、安全基线、性能预算、编码规范、中文注释和覆盖率报告；覆盖率低于合同门槛/基线即 finding。高风险的认证、权限、数据迁移、并发、安全、AI 工具调用任务，必须在任务 done 前得到独立评审结论。AC 对账逐条引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据，否则标 false 或 finding。
+4. 对变更面检查可访问性、安全基线、性能预算、编码规范、中文注释和覆盖率报告；覆盖率低于合同门槛/基线即 finding。高风险的认证、权限、数据迁移、并发、安全、AI 工具调用任务，必须在任务 done 前得到独立评审结论。AC 对账逐条引用 AC 原文的用户可见结果；AC 要求界面、文案或入口时，API 证据不能单独判 pass，必须绑定 UI/E2E 证据，否则标 false 或 finding。若 accepted finding 影响某条 AC 的 Then 子句，该 AC 必须写 `pass (with residual)`，不能写成无残余的 pass。
 5. 检查架构/ADR：契约是否可实现、可测试，安全边界和数据流是否清楚；不重新设计架构，发现缺口写 finding。
 6. 迁移只在副本上验证 forward 和 rollback；绝不碰生产。
 7. 找假绿：跳过的测试、零测试、吞掉的错误、retry 掩盖的失败、没有断言的测试。
-8. 写 review：verdict、DoD 清单、按严重级别排序的 findings 和证据链接。Verifier 的 review 是独立技术验收，不是 Product 预验收或用户产品验收；不要把三者混为一个结论。
+8. 写 review：verdict、DoD 清单、按严重级别排序的 findings、`reviewed_task_reviews` 和证据链接。先读本模块每个任务的最新 task review，逐条对账 fixed/accepted/open；模块评审必须列出每个已有 task review 的最新 `review_id`。Verifier 的 review 是独立技术验收，不是 Product 预验收或用户产品验收；不要把三者混为一个结论。
 9. 运行 `gate check`，或说明为什么 gate 应该失败。
 
 ## 长命令与后台通知
@@ -318,8 +321,8 @@ permissions:
 
 ## Findings
 
-- P0/P1 必须在 gate 通过前修复。
-- P2/P3 可以有书面理由地接受。
+- P0/P1 必须在 gate 通过前修复，不能 `accepted`。
+- P2/P3 不能保持 `open`：必须 `fixed` 或 `accepted`，accepted 要写 `owner`、`due`、`accepted_reason`；旧评审只 warning。
 - 覆盖率缺失/低于门槛、方法级注释缺失、复杂业务流程无可读注释，至少 P2；若导致验收/安全边界不可验证，升 P1。
 - 每个 finding 都要有文件/行号或可复现命令、观察值 vs 期望值、严重级别。
 
@@ -355,12 +358,17 @@ findings:
     severity: P0 | P1 | P2 | P3
     title: ...
     status: open | fixed | accepted
+    owner: riccon/builder-xxx      # accepted 必填
+    due: Mxx gate 前               # accepted 必填
+    accepted_reason: ...           # accepted 必填
+reviewed_task_reviews:
+  - REV-TASK-0001
 evidence:
   - EV-0001
 created_at: ...
 ```
 
-- P0/P1 必须 `fixed`；`accepted` 只允许 P2/P3。
+- P0/P1 必须 `fixed`；`accepted` 只允许 P2/P3，并且必须有 owner/due/accepted_reason。pass 评审不得保留 open finding。
 - strict 绑定项目必须填 `dod_evidence`：每个 true 的 acceptance/build/tests/e2e/coverage/docs 绑定真实、非 manual、exit 0、已列入 `reviewed_evidence` 的 EV；build/tests/e2e/coverage 的 EV 命令必须覆盖合同命令。没有证据就标 false 或 verdict fail，不要自报。任务级 EV 可以是定向测试；模块 review 的 `tests/coverage` 必须绑定覆盖合同命令的全量 EV，不能用任务级定向 EV 替代。未加引号管道默认被拒绝（除非包装在带 pipefail 的脚本/引号命令中）；`||` 只允许 `exit 非零`；`;`/后台 `&` 后接 `echo`/`true`/`cat`/`tee`/`sleep`/`exit 0` 会被 gate 拒绝。
 - `verdict` 不是 `pass` 时，gate 不应通过。
 - 写完运行 `riccon gate check --module M01`。

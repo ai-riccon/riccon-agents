@@ -5,12 +5,13 @@ task_id: TASK-0001
 reviewer:
   # session 必须是当前真实 OpenCode 会话 ID（ses_...）；不要写 ses_verifier_* 或人类标签。
   agent: riccon/verifier
-  session: ses_xxx
+  session: REPLACE_WITH_REAL_SESSION_ID
   model: opencode-go/deepseek-v4.1-flash#max
   independent: true
 verdict: pass
 reviewed_commits: []
 head_commit: ""
+# pass 时不得保留 open finding；P0/P1 必须 fixed；P2/P3 accepted 必须写 owner、due、accepted_reason。
 findings: []
 evidence: []
 created_at: "2026-01-01T00:00:00.000Z"

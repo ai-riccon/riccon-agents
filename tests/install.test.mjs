@@ -57,6 +57,7 @@ test('install copies the team and backs up existing files', (t) => {
   for (const path of [
     'agents/riccon/lead.md',
     'commands/riccon-start.md',
+    'commands/riccon-improve.md',
     'skills/riccon-core/SKILL.md',
     'riccon/scripts/riccon.mjs',
     'riccon/schemas/contract.schema.json',

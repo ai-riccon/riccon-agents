@@ -1,13 +1,13 @@
 ---
-# 模块评审模板；任务级/架构级评审使用 templates/state/task-review.md，
-# 并写到 .riccon/reviews/tasks/，不要放在 reviews/ 顶层。
+# 模块评审模板；发布评审使用 templates/state/release-review.md，
+# 任务级/架构级评审使用 templates/state/task-review.md，并写到 .riccon/reviews/tasks/。
 review_id: REV-M01-001
 module_id: M01
 verifier: riccon/verifier
 reviewer:
   # session 必须是当前真实 OpenCode 会话 ID（ses_...）；不要写 ses_verifier_* 或人类标签。
   agent: riccon/verifier
-  session: ses_xxx
+  session: REPLACE_WITH_REAL_SESSION_ID
   model: opencode-go/deepseek-v4.1-flash#max
   independent: true
 verdict: pass
@@ -20,7 +20,7 @@ dod:
   review: true
   docs: true
   evidence: true
-# strict 项目必须填写；每个 true 的 DoD（review/evidence 除外）至少绑定一条
+# strict 项目必须填写；模块 review 中每个 true 的 DoD（review/evidence 除外）至少绑定一条
 # 真实、通过、已列入 reviewed_evidence 的 EV。模块 review 的 tests/coverage
 # 必须绑定覆盖合同 commands 的全量 EV；任务级定向 EV 不能替代模块全量绑定。
 # acceptance 必须按 AC 原文绑定用户可见证据；UI/文案/入口 AC 不能只用 API 证据。
@@ -31,7 +31,10 @@ dod_evidence:
   coverage: [EV-0002]
   e2e: [EV-0003]
   docs: [EV-0004]
+# pass 时不得保留 open finding；P0/P1 必须 fixed；P2/P3 accepted 必须写 owner、due、accepted_reason。
 findings: []
+# 列出本模块每个已有 task review 的最新 review_id；新评审缺失会让 gate 失败。
+reviewed_task_reviews: []
 evidence: []
 reviewed_evidence: []
 notes: 一页摘要放在模块评审包里；reviewed_evidence 必须覆盖每个任务的最新证据。

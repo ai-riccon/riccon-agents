@@ -44,6 +44,9 @@ permissions:
     resource: .opencode/**
     effect: ask
   - action: edit
+    resource: $HOME/.config/opencode/riccon/*
+    effect: ask
+  - action: edit
     resource: .git/**
     effect: ask
   - action: edit
@@ -396,7 +399,7 @@ subagent 回执必须包含：任务、结果、改动文件、工具及理由�
 
 ## M1 状态与已验证循环
 
-M1 的 toy（bookmarks）已验证：合同 → 4 个任务 → 6 条证据 → 独立 E2E/axe → gate → 评审包 → handoff。它证明循环可用，不代表任意项目都能自主交付。
+M1 的 toy 循环已由 `tests/toy.test.mjs` 覆盖：init → 模块/任务 → 证据 → gate 失败/通过 → handoff。它证明循环可用，不代表任意项目都能自主交付。
 
 标准循环：
 

@@ -40,7 +40,7 @@ npm run sync:agents
 - 文档保持小且当前；更新 canonical 文件，不要新增平行文档。目标项目的 `AGENTS.md` 只维护合同、内容索引和硬规则，详细内容放 canonical 文档。
 - “覆盖率”默认指代码行/分支覆盖率，不是 AC 覆盖；AC 覆盖单独报告。新项目默认 line ≥80%、branch ≥70%，项目合同可覆盖；新增/修改代码不得降低基线。
 - 新项目由 Architect 在 Builder 开始前创建 `docs/CODING-STANDARDS.md`，按技术栈和行业最佳实践定义编码规范；Builder 必须遵循，Verifier 检查。
-- 团队可以提出修改自身定义的提案，但必须由人应用；目标项目里的 agent 不得编辑 `.opencode/**`。
+- 团队可以提出修改自身定义的提案，但必须由人应用；目标项目里的 agent 不得编辑 `.opencode/**` 或已安装的 Riccon 内核。
 - 正式发布前必须通过 `npm test`、`npm run check`、临时项目 init → module → task → evidence → gate → handoff，以及最终 HEAD 的 CI。
 
 ## 语言与风格
@@ -52,7 +52,7 @@ npm run sync:agents
 
 ## 发布
 
-- 当前版本：`0.1.8`。
+- 当前版本：`0.1.11`。
 - 版本号同步修改：`package.json`、`package-lock.json`、`scripts/lib/version.mjs`、`README.md`、`AGENTS.md`、`CHANGELOG.md`；`riccon doctor` 会检查一致性。
 - 打 annotated tag：`vX.Y.Z`；tag 必须指向通过验证的 release commit。
 - 公开仓库只保留团队内核、模板、测试和公开文档；历史试点/审计材料不进入仓库。

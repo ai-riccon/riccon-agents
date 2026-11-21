@@ -475,6 +475,23 @@ export function createTask(projectDir, input) {
       { code: 'ERR_MODULE_DONE' },
     );
   }
+  const writeScope = (input.writeScope || [])
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+  const acceptance = (input.acceptance || [])
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+  if (!writeScope.length) {
+    fail(`task ${input.title} requires at least one --write-scope`, {
+      code: 'ERR_TASK_SCOPE',
+    });
+  }
+  if (!acceptance.length) {
+    fail(`task ${input.title} requires at least one --acceptance`, {
+      code: 'ERR_TASK_ACCEPTANCE',
+    });
+  }
+
   const tasks = readTasks(projectDir);
   const id = nextId('TASK', tasks.map((task) => task.id), 4);
 
@@ -486,8 +503,8 @@ export function createTask(projectDir, input) {
     title: input.title,
     owner: input.owner,
     status: 'planned',
-    write_scope: input.writeScope || [],
-    acceptance: input.acceptance || [],
+    write_scope: writeScope,
+    acceptance,
     evidence: [],
     tools_used: [],
     blocker: null,

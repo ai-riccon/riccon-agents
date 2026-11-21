@@ -22,6 +22,12 @@ import {
 import { loadContract } from "./contract.mjs";
 import { checkGate } from "./gate.mjs";
 import { isAccepted } from "./acceptance.mjs";
+import {
+  findingClosureChecks,
+  isRealSessionId,
+  requiresRealSession,
+  reviewClosureChecks,
+} from "./review.mjs";
 
 const T4_ARTIFACTS = ["threat_model", "load_test", "rollback_drill", "runbook"];
 const BASE_ARTIFACTS = ["rollback_drill", "runbook"];
@@ -36,32 +42,17 @@ function isImplementationRole(agent) {
 }
 
 /**
- * 将 review findings 映射为 release 检查项：P0/P1 必须 fixed，P2/P3 open 只警告。
+ * 将 review findings 映射为 release 检查项。
+ *
+ * 保留旧导出供调用方和测试使用；新的 release/second review 使用
+ * `reviewClosureChecks`，按评审创建时间启用 finding 闭环规则。
  *
  * @param {any[]} findings
  * @param {string} prefix
  * @returns {{ id: string, status: 'fail'|'warn', message: string }[]}
  */
 export function reviewFindingChecks(findings, prefix = "release_finding") {
-  const checks = [];
-  for (const finding of findings || []) {
-    const blocking =
-      finding.severity === "P0" || finding.severity === "P1";
-    if (blocking && finding.status !== "fixed") {
-      checks.push({
-        id: `${prefix}:${finding.id}`,
-        status: "fail",
-        message: `${finding.severity} ${prefix} finding ${finding.id} is ${finding.status}: ${finding.title}`,
-      });
-    } else if (!blocking && finding.status === "open") {
-      checks.push({
-        id: `${prefix}:${finding.id}`,
-        status: "warn",
-        message: `${finding.severity} ${prefix} finding ${finding.id} is open: ${finding.title}`,
-      });
-    }
-  }
-  return checks;
+  return findingClosureChecks(findings, { prefix, enforce: false });
 }
 
 function fileSha256(path) {
@@ -252,6 +243,14 @@ function validateSecondReview(projectDir, release, reviewPath, expectedModel) {
   }
   if (!review.reviewer || review.reviewer.independent !== true) {
     errors.push("second review reviewer.independent must be true");
+  }
+  if (
+    requiresRealSession(review.created_at) &&
+    !isRealSessionId(review.reviewer?.session)
+  ) {
+    errors.push(
+      "second review reviewer.session must be a real ses_... id for reviews created on or after 2026-11-20",
+    );
   }
   if (expectedModel && review.reviewer?.model !== expectedModel) {
     errors.push(
@@ -864,10 +863,9 @@ export function checkRelease(projectDir, options = {}) {
             "pass",
             `second review ${result.review.review_id} by ${result.review.reviewer.model} is bound to ${data.id}`,
           );
-          for (const check of reviewFindingChecks(
-            result.review.findings,
-            "release_second_review_finding",
-          )) {
+          for (const check of reviewClosureChecks(result.review, {
+            prefix: "release_second_review_finding",
+          })) {
             add(check.id, check.status, check.message);
           }
         }
@@ -982,6 +980,18 @@ export function checkRelease(projectDir, options = {}) {
         "pass",
         `release reviewer ${releaseReview.data.reviewer.agent} is marked independent`,
       );
+      if (!isRealSessionId(releaseReview.data.reviewer.session)) {
+        const enforce = requiresRealSession(releaseReview.data.created_at);
+        add(
+          "release_review_session",
+          enforce ? "fail" : "warn",
+          `release reviewer.session ${releaseReview.data.reviewer.session} is not a real ses_ session id; ${
+            enforce
+              ? "reviews created on or after 2026-11-20 must use the actual OpenCode session id"
+              : "legacy reviews before 2026-11-20 only warn"
+          }`,
+        );
+      }
     }
 
     const second = release?.data?.approval?.second_review;
@@ -1096,21 +1106,10 @@ export function checkRelease(projectDir, options = {}) {
         );
       }
     }
-    for (const finding of releaseReview.data.findings || []) {
-      const blocking = finding.severity === "P0" || finding.severity === "P1";
-      if (blocking && finding.status !== "fixed") {
-        add(
-          `release_finding:${finding.id}`,
-          "fail",
-          `${finding.severity} release finding ${finding.id} is ${finding.status}: ${finding.title}`,
-        );
-      } else if (!blocking && finding.status === "open") {
-        add(
-          `release_finding:${finding.id}`,
-          "warn",
-          `${finding.severity} release finding ${finding.id} is open: ${finding.title}`,
-        );
-      }
+    for (const check of reviewClosureChecks(releaseReview.data, {
+      prefix: "release_finding",
+    })) {
+      add(check.id, check.status, check.message);
     }
   }
 

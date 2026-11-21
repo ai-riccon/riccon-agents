@@ -21,6 +21,7 @@
 | 编辑 `AGENTS.md`、`.opencode/**`、`.git/**` | ask |
 | 写项目外目录 | ask |
 | 读取已安装的 Riccon 内核 | allow |
+| 编辑已安装的 Riccon 内核 | ask |
 
 ## 破坏性 ask 基线
 
@@ -47,7 +48,7 @@ OpenCode 使用有序规则，最后匹配生效。Agent 定义把宽泛 allow �
 
 对重要操作使用一次性运行时：
 
-- v1：项目 Docker/Compose 环境跑构建、测试、数据库和预览；git worktree/commit 用于文件回滚；
+- 当前：项目 Docker/Compose 环境跑构建、测试、数据库和预览；git worktree/commit 用于文件回滚；
 - T4/生产：只挂载项目的容器或 VM，限制网络出口，不放生产凭据；
 - 绝不对生产跑破坏性数据库测试。
 

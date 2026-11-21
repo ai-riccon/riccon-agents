@@ -72,7 +72,7 @@ planned → ready → in_progress → review → done
 
 `review` 和 `done` 至少需要一条证据。`done` 还需要至少一条**执行证据**（`manual: false`），且该任务最后一条执行证据必须 `exit_code: 0`；只有手工 `evidence add` 证据不能建立 done。strict 绑定要求先提交再取证：`dirty: true` 的证据会让 gate 失败（legacy 只 warning）。`true`、`:`、`exit 0`、`echo`/`sleep` 这类 no-op，以及 `|| true` 掩盖失败的命令，不能建立 done。内核会重算 `output_sha256` 和 `output_bytes`，并校验证据归属；日志被改动、路径越界或记录属于别的任务都会失败。失败命令是证据，但不是通过。
 
-任务创建时如果 `write_scope` 超过 8 项或 acceptance 达到 6 项，CLI 会提示拆分（`warnings` 字段）；这是粒度提示，不是硬限制。拆分按“一个可独立验收的用户可见结果”判断，不要只看数量；多个页面/入口/用户动作应拆成多个任务。任务进入 `in_progress` 前，模块必须是 `building`，且模块依赖全部 done。
+`riccon task new` 要求至少一个 `--write-scope` 和一个 `--acceptance`；空 brief 会被拒绝。任务创建时如果 `write_scope` 超过 8 项或 acceptance 达到 6 项，CLI 会提示拆分（`warnings` 字段）；这是粒度提示，不是硬限制。拆分按“一个可独立验收的用户可见结果”判断，不要只看数量；多个页面/入口/用户动作应拆成多个任务。任务进入 `in_progress` 前，模块必须是 `building`，且模块依赖全部 done。
 
 任务第一次进入 `in_progress` 时记录 `baseline_commit`，之后 review/blocked 再回到 in_progress 不会重置 baseline；同时按 owner 写入 `state.active_tasks`；同一 owner 已有另一个 in-progress 任务时拒绝，`--force` 不绕过这个冲突。并行 builder 使用实例 owner（如 `riccon/builder-b2`），同一 owner 同时只能有一个 in_progress。进入 `review`/`done` 时，内核用 git 比较 baseline 以来的 tracked/untracked 变更；`write_scope` 之外的文件会导致失败（`.riccon/`、`.codegraph/`、`node_modules/` 除外）。done 任务必须有可解析、且是 HEAD 祖先的 `end_commit`；无 git 却记录 commit、done 缺 `end_commit`、无效/倒退 commit 都 fail-closed。并行任务可用 `task update --baseline-commit SHA --end-commit SHA` 显式设置范围：commit 必须存在且是 HEAD 祖先，baseline 必须是 end 的祖先；`--end-commit` 只允许 review/done。module gate 在 `--require-scope` 下还会检查“每个 done 任务 end_commit 之后提交的文件是否落在全项目任一任务的 write_scope 内”，因此 end_commit 之后的已提交越界改动也会失败。没有 baseline 的旧任务在普通 gate 产生 `task-scope-unverified` warning，在 `--require-scope` 下失败。
 
@@ -113,13 +113,15 @@ planned → ready → in_progress → review → done
 
 ### 评审
 
-`reviews/M01-review.md` front matter：`review_id`、`module_id`、`verifier`、`reviewer`（`agent`、`session`、`model`、`independent`）、`verdict`（`pass|fail|blocked`）、`dod` 布尔值、`dod_evidence`（DoD key → EV ID 或数组）、`findings`（`P0`–`P3`，状态 `open|fixed|accepted`）、`evidence`、`reviewed_evidence`、`created_at`。`reviewer.session` 填当前真实 `ses_...` 会话 ID；旧 review 的合成标签只产生 warning，新 review 必须使用真实 ID。
+`reviews/M01-review.md` front matter：`review_id`、`module_id`、`verifier`、`reviewer`（`agent`、`session`、`model`、`independent`）、`verdict`（`pass|fail|blocked`）、`dod` 布尔值、`dod_evidence`（DoD key → EV ID 或数组）、`findings`（`P0`–`P3`，状态 `open|fixed|accepted`）、`reviewed_task_reviews`（本模块最新 task review ID）、`evidence`、`reviewed_evidence`、`created_at`。`reviewer.session` 填当前真实 `ses_...` 会话 ID。0.1.9 起创建的 review 如果使用 `ses_verifier_*`、`ses_xxx`、`test-session` 等非真实 ID，gate 会失败；2026-11-20 之前的旧 review 只产生 warning。
 
-模块评审固定写在 `.riccon/reviews/<module>-review.md`，由 `review.schema.json` 校验，只有它能参与模块 gate。任务级/架构级独立评审写在 `.riccon/reviews/tasks/<task>-review.md`，由 `task-review.schema.json` 校验；它不进入模块 gate，由 Lead 在任务 closeout 时核对，并在模块评审中引用。`state validate` 会校验两类评审；顶层出现 `task_id` 的评审会提示迁移到 `reviews/tasks/`。
+0.1.11 起，`verdict: pass` 的评审必须闭环 finding：P0/P1 只能 `fixed`；P2/P3 不能 `open`，必须是 `fixed` 或 `accepted`；`accepted` 必须写 `owner`、`due`、`accepted_reason`。2026-11-22 之前的旧评审在 `state validate` 中只 warning，避免追溯失败；gate/release 对 P0/P1 仍始终失败。`state validate` 只检查每个任务最新的 task review；旧评审保留历史。模块评审还必须用 `reviewed_task_reviews` 列出本模块每个已有 task review 的最新 `review_id`，gate 和 `state validate` 会检查覆盖；缺失时新评审失败，旧评审 warning。
 
-Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/accepted 的 P0/P1。Review 还必须绑定当前 module，`reviewed_evidence` 覆盖每个任务的最新证据，`created_at` 晚于被评审证据，且 `reviewer.independent: true`。
+模块评审固定写在 `.riccon/reviews/<module>-review.md`，由 `review.schema.json` 校验，只有它能参与模块 gate。任务级/架构级独立评审写在 `.riccon/reviews/tasks/<task>-review.md`，由 `task-review.schema.json` 校验；它不进入模块 gate，由 Lead 在任务 closeout 时核对，并在模块评审中引用。`state validate` 会校验两类评审；顶层出现 `task_id` 的评审会提示迁移到 `reviews/tasks/`。替换旧的模块评审前，先把旧文件归档到 `.riccon/archive/reviews/<module>-review-<review_id>.md`；`previous_review`/`supersedes` 指向的 review 找不到时 `state validate` 会 warning，不要直接覆盖历史。
 
-`quality.evidence_binding: strict` 时，每个为 true 的 `acceptance/build/tests/e2e/coverage/docs` 必须有 `dod_evidence` 绑定；绑定的 EV 必须属于本模块、`manual: false`、`exit_code: 0`、哈希校验通过且列入 `reviewed_evidence`。`build/tests/e2e/coverage` 的 EV 命令还必须覆盖合同对应命令。合同允许时 `tests` 和 `coverage` 绑定同一条 coverage 全量 EV，不要为 coverage 再跑一遍全量。空命令、`not-implemented`、`true`/`echo`/`sleep`/`|| true` 等占位或 no-op 会让 gate 失败；未加引号的管道默认失败（没有 pipefail 时退出码来自最后一个命令）；`||` 只允许 `exit 非零`，`;`/换行后接 `echo`、`true`、`cat`、`tee`、`sleep`、`exit 0` 失败；后台 `&` 失败。`&&`、`|| exit 1`、`for ... || exit 1` 和带引号的 `bash -o pipefail -c '...'` 保留。`review` 和 `evidence` 两项由结构检查本身覆盖，不需要绑定。`quality.evidence_binding: legacy`（旧合同默认）缺少 `dod_evidence` 只产生 warning；一旦提供仍按严格规则校验。`reviewer.agent` 可以是 `riccon/verifier` 或会话级的 verifier 身份；它不能是同一模块中实现类任务的 owner（`riccon/verifier` 自己的验证类任务不触发冲突）。Release review 还要绑定 `release_id`/`version`/`environment`，并覆盖 release 的全部 evidence。
+Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/accepted 的 P0/P1；0.1.11 起新评审还要求 P2/P3 已 `fixed` 或带 owner/due/accepted_reason 的 `accepted`。Review 还必须绑定当前 module，`reviewed_evidence` 覆盖每个任务的最新证据，`created_at` 晚于被评审证据，且 `reviewer.independent: true`。
+
+`quality.evidence_binding: strict` 时，**模块 review** 中每个为 true 的 `acceptance/build/tests/e2e/coverage/docs` 必须有 `dod_evidence` 绑定；绑定的 EV 必须属于本模块、`manual: false`、`exit_code: 0`、哈希校验通过且列入 `reviewed_evidence`。`build/tests/e2e/coverage` 的 EV 命令还必须覆盖合同对应命令。合同允许时 `tests` 和 `coverage` 绑定同一条 coverage 全量 EV，不要为 coverage 再跑一遍全量。空命令、`not-implemented`、`true`/`echo`/`sleep`/`|| true` 等占位或 no-op 会让 gate 失败；未加引号的管道默认失败（没有 pipefail 时退出码来自最后一个命令）；`||` 只允许 `exit 非零`，`;`/换行后接 `echo`、`true`、`cat`、`tee`、`sleep`、`exit 0` 失败；后台 `&` 失败。`&&`、`|| exit 1`、`for ... || exit 1` 和带引号的 `bash -o pipefail -c '...'` 保留。`review` 和 `evidence` 两项由结构检查本身覆盖，不需要绑定。`quality.evidence_binding: legacy`（旧合同默认）缺少 `dod_evidence` 只产生 warning；一旦提供仍按严格规则校验。`reviewer.agent` 可以是 `riccon/verifier` 或会话级的 verifier 身份；它不能是同一模块中实现类任务的 owner（`riccon/verifier` 自己的验证类任务不触发冲突）。Release review 还要绑定 `release_id`/`version`/`environment`，并覆盖 release 的全部 evidence；它使用 `templates/state/release-review.md`，DoD 是发布清单布尔值，不复用模块 review 的 `dod_evidence` 绑定。
 
 `reviewer.agent/session/model` 是记录字段，不是身份凭证；本地内核不能证明 reviewer 与 Builder/Lead 是不同主体。复审仍把“独立 reviewer”列为未完全解决的风险。
 
@@ -137,7 +139,7 @@ Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/
 
 `handoffs/handoff-0001.md` front matter：`handoff_id`、`session`、`summary`、`next`、`invariants`、`risks`、`first_read`、`quality_gate`、`created_at`。
 
-`riccon handoff new` 会先检查：没有 `in_progress`/`review` 任务；done 任务都有证据；phase 为 modules/release/operate 时 module gate 为 pass，且 gate 的 module 必须是当前/最后一个 done 模块；gate 的 `checked_at` 不能早于最新任务或评审；release gate 不是 fail，operate 阶段必须 pass；`next` 非空且不是占位词；`first_read` 非空且路径存在。任一项失败就拒绝写 handoff。`first_read` 传空数组会回退默认列表，不会绕过检查；默认列表在项目存在 `docs/COLLABORATION.md` 时会包含它。`quality_gate.product_acceptance_open` 记录尚未完成的 Product/用户验收；`riccon status` 会在 last handoff 早于最后一个 done 模块时标记 `stale`。
+`riccon handoff new` 会先检查：没有 `in_progress`/`review` 任务；done 任务都有证据；phase 为 modules/release/operate 时 module gate 为 pass，且 gate 的 module 必须是当前/最后一个 done 模块；gate 的 `checked_at` 不能早于被 gate 模块的最新任务或模块评审；release gate 不是 fail，operate 阶段必须 pass；`next` 非空且不是占位词；`first_read` 非空且路径存在。任一项失败就拒绝写 handoff。`first_read` 传空数组会回退默认列表，不会绕过检查；默认列表在项目存在 `docs/COLLABORATION.md` 时会包含它。`quality_gate.product_acceptance_open` 记录尚未完成的 Product/用户验收；`riccon status` 会在 last handoff 早于最后一个 done 模块时标记 `stale`。
 
 触发时机：每个模块 gate 完成后、phase 切换、发出决策/评审包后、会话暂停超过 24h、切换项目/风险等级/模型、进入 T4/生产批准前。输入接近 120K tokens、300/440 steps、60 次工具调用或自动 compaction 一次只是**检查点**，不是强制 handoff：先判断是否会降低质量或导致返工，不会才切。handoff 前必须满足：状态/证据/review/gate 已更新、代码文档可恢复、没有半写文件/未完成 subagent/未应用决策、`next` 可直接执行、新会话无需重读旧聊天。任何一项不满足就继续或标 blocked；不得为了省成本跳过测试、E2E、独立 review 或证据。handoff 不替代 gate、review 或用户批准。handoff 后新开 session 运行 `/riccon-resume`。
 
@@ -152,7 +154,7 @@ Gate 要求 `verdict: pass`、所有必需 DoD key 为 true，并且没有 open/
 - review 存在、有效、verdict 为 pass，绑定当前 module，覆盖最新证据且晚于证据，reviewer 独立；
 - 合同的 DoD（或默认值）全部为 true，且 strict 绑定时每项都有真实 passed EV；
 - DoD 对应的合同命令非空、非占位；strict 下空/占位命令直接失败；
-- 没有 open/accepted P0/P1；
+- 没有 open/accepted P0/P1；0.1.11 起新评审不得有 open P2/P3，accepted P2/P3 带 owner/due/accepted_reason；
 - 没有被阻塞的开放决策；
 - 墙钟在模块上限内（或 `--allow-overrun`）；`--require-scope` 可把无 baseline 的 scope 检查从 warning 升级为 fail。
 
@@ -169,11 +171,11 @@ Gate 结果写入 `state.gate`。`riccon module update M01 --status done` 会运
 - 批准决策存在、已 `answered`、owner 为 `user`、`answer_kind: approve`，并绑定同一 `release_id` 和 `environment`；`answer_sha256` 匹配，时间线不倒置；有新审批时 `release_sha256` 必须匹配当前 version/scope/artifacts 原始字节、EV JSON/日志、绑定该 release 的 RELEASE 评审与第二评审文件；
 - 发布 evidence 全部存在、属于已知任务、哈希匹配、非 manual、exit 0；
 - 发布产物存在：T4 要求威胁模型、负载测试、回滚演练和 runbook；T1–T3 至少要求回滚演练和 runbook；
-- `RELEASE` 评审存在、verdict `pass`，按 `release_id` 选择，绑定同一 `release_id`/`version`/`environment`，覆盖 release 全部 evidence，reviewer 独立且 review 晚于证据；主/第二评审的 open/accepted P0/P1 都阻断；合同 `definition_of_done.release` 全部 true；
+- `RELEASE` 评审存在、verdict `pass`，按 `release_id` 选择，绑定同一 `release_id`/`version`/`environment`，覆盖 release 全部 evidence，reviewer 独立、新 review 使用真实 `ses_...` 会话 ID 且 review 晚于证据；主/第二评审的 open/accepted P0/P1 都阻断，新评审的 open P2/P3 也会失败；合同 `definition_of_done.release` 全部 true；RELEASE 评审模板见 `templates/state/release-review.md`；
 - T4 调用 `sandbox check`，并要求 release evidence 包含 `sandbox.evidence` 指向的 passing EV；
-- 没有 open/accepted P0/P1，没有被阻塞的开放决策。
+- 没有 open/accepted P0/P1；0.1.11 起新评审不得有 open P2/P3，accepted P2/P3 带 owner/due/accepted_reason；没有被阻塞的开放决策。
 
-结果写入 `state.release_gate`。`riccon sandbox check` 独立检查沙箱声明、`commands.sandbox`、`docs/SANDBOX.md`、limits 和沙箱证据；还会静态检查 `commands.sandbox` 指向的脚本是否声明 `docker/podman run`、`--network none`、`--read-only`、`--cap-drop ALL`、`--user`。T4 的 `sandbox.evidence` 必须是 `commands.sandbox` 的 passing EV，network 只能是 `none`/`allowlist`。这不是 runtime attestation；真实隔离仍需可信 runner 或用户风险接受。
+结果写入 `state.release_gate`。`riccon sandbox check` 独立检查沙箱声明、`commands.sandbox`、`docs/SANDBOX.md`、network/allowlist、limits、`attestation_terms` 和沙箱证据；还会静态检查 `commands.sandbox` 指向的脚本是否声明 `docker/podman run`、`--network none`、`--read-only`、`--cap-drop ALL`、`--user`。T4 的 `sandbox.evidence` 必须是 `commands.sandbox` 的 passing EV，network 只能是 `none`/`allowlist`。这不是 runtime attestation；真实隔离仍需可信 runner 或用户风险接受。
 
 ## 预算
 
@@ -181,13 +183,17 @@ Gate 结果写入 `state.gate`。`riccon module update M01 --status done` 会运
 
 ## CLI
 
+下列命令中的 `riccon` 指已安装内核的 CLI；如果 `command -v riccon` 为空，使用 `node "$HOME/.config/opencode/riccon/scripts/riccon.mjs"`。
+
 ```bash
 riccon init
 riccon adopt --write
 riccon upgrade [--write] [--adopt-legacy]
 riccon contract validate
 riccon contract sync
+riccon contract show
 riccon state validate
+riccon state show
 riccon module new|update|cost|list|show
 riccon task new|update|list|show
 riccon evidence run|add|list
